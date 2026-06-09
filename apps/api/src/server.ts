@@ -8,14 +8,23 @@ import { createPriceService } from "./prices/price-service.js";
 
 const root = resolve(import.meta.dirname, "../../..");
 const databasePath = resolve(root, process.env.DATABASE_URL ?? "./data/projeto41.sqlite");
+const port = Number(process.env.PORT ?? 3001);
+const demoMode = process.env.DEMO_MODE === "true";
 mkdirSync(dirname(databasePath), { recursive: true });
 const db = createDatabase(databasePath);
-const priceService = createPriceService(db, {
+const livePriceService = createPriceService(db, {
   cryptoUrl: process.env.CRYPTO_PRICE_URL ?? "http://34.215.218.57:5000",
   brapiToken: process.env.BRAPI_TOKEN ?? ""
 });
+const priceService = demoMode
+  ? {
+      runAll: async () => [
+        { provider: "demo", updated: db.prices.list().length, errors: [] as string[] }
+      ]
+    }
+  : livePriceService;
 const app = buildApp({ db, priceService });
-const stopScheduler = startScheduler(db, priceService);
+const stopScheduler = demoMode ? () => undefined : startScheduler(db, livePriceService);
 
 const close = async () => {
   stopScheduler();
@@ -27,7 +36,6 @@ process.on("SIGTERM", () => void close());
 
 await app.listen({
   host: "127.0.0.1",
-  port: Number(process.env.PORT ?? 3001)
+  port
 });
-console.log("Projeto 41 API: http://127.0.0.1:3001");
-
+console.log(`Projeto 41 API${demoMode ? " demo" : ""}: http://127.0.0.1:${port}`);

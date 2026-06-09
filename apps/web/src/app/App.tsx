@@ -104,6 +104,8 @@ const nav: { id: Page; label: string; icon: typeof Activity }[] = [
 ];
 
 export function App() {
+  const demoMode = (import.meta as ImportMeta & { env?: Record<string, string> }).env
+    ?.VITE_DEMO_MODE === "true";
   const [page, setPage] = useState<Page>("dashboard");
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
   const [loading, setLoading] = useState(true);
@@ -145,7 +147,7 @@ export function App() {
           <div className="brand-mark">41</div>
           <div>
             <strong>Projeto 41</strong>
-            <span>Patrimônio local</span>
+            <span>{demoMode ? "Ambiente demonstrativo" : "Patrimônio local"}</span>
           </div>
           <button className="mobile-close" onClick={() => setMobileOpen(false)} aria-label="Fechar menu">
             <X size={20} />
@@ -185,7 +187,10 @@ export function App() {
           </button>
           <div>
             <span className="eyebrow">CARTEIRA PESSOAL</span>
-            <h1>{current.label}</h1>
+            <h1>
+              {current.label}
+              {demoMode && <span className="demo-badge">DEMO</span>}
+            </h1>
           </div>
           <button className="refresh-button" onClick={refreshPrices} disabled={refreshing}>
             <RefreshCw size={17} className={refreshing ? "spin" : ""} />

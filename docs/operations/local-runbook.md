@@ -42,3 +42,12 @@ npm run lint
 npm run build
 ```
 
+## Demonstracao
+
+```bash
+npm run demo
+```
+
+A demonstracao abre em `http://127.0.0.1:5174`, usa API em
+`127.0.0.1:3101` e banco `data/projeto41-demo.sqlite`. Os dados sao
+completamente sinteticos e restaurados a cada inicializacao.

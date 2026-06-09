@@ -9,6 +9,7 @@
   ],
   "scripts": {
     "dev": "node scripts/dev.mjs",
+    "demo": "node scripts/demo.mjs",
     "build": "npm run build --workspaces --if-present",
     "test": "vitest run",
     "test:watch": "vitest",

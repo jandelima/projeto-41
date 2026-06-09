@@ -25,3 +25,14 @@ Abra `http://127.0.0.1:5173`. A API escuta somente em
 O token gratuito da brapi deve ser configurado em `BRAPI_TOKEN`. A planilha,
 o banco, backups e `.env` nunca sao versionados.
 
+## Modo demonstracao
+
+Para gravar videos sem expor dados reais:
+
+```bash
+npm run demo
+```
+
+Abra `http://127.0.0.1:5174`. Esse modo usa `data/projeto41-demo.sqlite`, API
+em `127.0.0.1:3101`, patrimonio sintetico de R$ 20 mil e nao consulta
+provedores externos. Cada inicializacao restaura os dados demonstrativos.
