@@ -1,0 +1,15 @@
+Projeto 41.xlsx
+Projeto 41.xlsx:Zone.Identifier
+*.sqlite
+*.sqlite-*
+data/
+backups/
+.env
+.worktrees/
+node_modules/
+dist/
+coverage/
+playwright-report/
+test-results/
+*.log
+*.tsbuildinfo
