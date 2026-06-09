@@ -15,16 +15,37 @@ describe("seedDemoDatabase", () => {
     const dashboard = buildDashboard(db);
 
     expect(dashboard.totalBrl).toBeCloseTo(20_000, 6);
-    expect(dashboard.portfolios.crypto.map((asset) => asset.asset).sort()).toEqual([
-      "BTC",
-      "ETH",
-      "SOL"
-    ].sort());
-    expect(dashboard.portfolios.b3.map((asset) => asset.asset).sort()).toEqual([
-      "BBAS3",
-      "PETR4",
-      "WEGE3"
-    ].sort());
+    expect(dashboard.portfolios.crypto.map((asset) => asset.asset).sort()).toEqual(
+      [
+        "AAVE", "ADA", "ASTR", "ATOM", "AVAX", "AXL", "BTC", "DYDX",
+        "ETH", "FET", "IMX", "LDO", "LINK", "MKR", "NEAR", "PENDLE",
+        "POL", "RENDER", "SEI", "SNX", "SOL", "UMA", "VANRY", "VET"
+      ].sort()
+    );
+    expect(dashboard.portfolios.b3.map((asset) => asset.asset).sort()).toEqual(
+      [
+        "BBAS3", "BBSE3", "BPAC11", "CASH3", "CMIN3", "FESA4", "OBTC3",
+        "PETR4", "SHUL4", "SLCE3", "TIMS3", "TTEN3", "WEGE3"
+      ].sort()
+    );
+    expect(
+      db.positions
+        .list()
+        .map(({ category, name, currency }) => ({ category, name, currency }))
+    ).toEqual([
+      { category: "cash", name: "Caixinha Nubank", currency: "BRL" },
+      { category: "cash", name: "Saldo BTG", currency: "BRL" },
+      { category: "cash", name: "Aupo11", currency: "BRL" },
+      { category: "dollar", name: "Binance", currency: "USD" },
+      { category: "dollar", name: "MetaMask", currency: "USD" },
+      { category: "dollar", name: "Autocustodia", currency: "USD" },
+      { category: "fixed_income", name: "Tesouro Direto BB", currency: "BRL" },
+      { category: "fixed_income", name: "Tesouro Direto BTG", currency: "BRL" },
+      { category: "fixed_income", name: "Outros titulos", currency: "BRL" },
+      { category: "reserve", name: "Caixinha Itau", currency: "BRL" },
+      { category: "reserve", name: "Caixinha Nubank", currency: "BRL" },
+      { category: "reserve", name: "Papel-moeda", currency: "BRL" }
+    ]);
     expect(dashboard.history.length).toBeGreaterThanOrEqual(90);
   });
 });

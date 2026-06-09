@@ -6,17 +6,21 @@ const commands = [
 ];
 
 const children = commands.map(([name, args]) => {
-  const child = spawn("npm", args, { stdio: ["inherit", "pipe", "pipe"] });
+  const child = spawn("npm", args, {
+    detached: true,
+    stdio: ["inherit", "pipe", "pipe"]
+  });
   child.stdout.on("data", (chunk) => process.stdout.write(`[${name}] ${chunk}`));
   child.stderr.on("data", (chunk) => process.stderr.write(`[${name}] ${chunk}`));
   return child;
 });
 
 function stop(signal) {
-  for (const child of children) child.kill(signal);
+  for (const child of children) {
+    if (child.pid) process.kill(-child.pid, signal);
+  }
 }
 
-process.on("SIGINT", () => stop("SIGINT"));
+process.on("SIGINT", () => stop("SIGTERM"));
 process.on("SIGTERM", () => stop("SIGTERM"));
 await Promise.all(children.map((child) => new Promise((resolve) => child.on("exit", resolve))));
-
