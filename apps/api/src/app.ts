@@ -129,7 +129,16 @@ export function buildApp({
 
   app.get("/api/history", async () => db.snapshots.list());
   app.get("/api/prices", async () => db.prices.list());
-  app.post("/api/prices/refresh", async () => ({ results: await priceService.runAll() }));
+  app.post("/api/prices/refresh", async () => {
+    try {
+      return { results: await priceService.runAll(), errors: [] };
+    } catch (error) {
+      return {
+        results: [],
+        errors: [error instanceof Error ? error.message : "Falha ao atualizar precos"]
+      };
+    }
+  });
   app.get("/api/export", async (_request, reply) => {
     reply.header("Content-Disposition", `attachment; filename="projeto41-export.json"`);
     return {

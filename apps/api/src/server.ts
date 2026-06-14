@@ -1,22 +1,21 @@
-import "dotenv/config";
 import { mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { createDatabase } from "@projeto41/db";
 import { buildApp } from "./app.js";
+import { loadServerConfig } from "./config.js";
 import { startScheduler } from "./jobs/scheduler.js";
 import { createPriceService } from "./prices/price-service.js";
 
 const root = resolve(import.meta.dirname, "../../..");
-const databasePath = resolve(root, process.env.DATABASE_URL ?? "./data/projeto41.sqlite");
-const port = Number(process.env.PORT ?? 3001);
-const demoMode = process.env.DEMO_MODE === "true";
+const config = loadServerConfig(root);
+const databasePath = resolve(root, config.databaseUrl);
 mkdirSync(dirname(databasePath), { recursive: true });
 const db = createDatabase(databasePath);
 const livePriceService = createPriceService(db, {
-  cryptoUrl: process.env.CRYPTO_PRICE_URL ?? "http://34.215.218.57:5000",
-  brapiToken: process.env.BRAPI_TOKEN ?? ""
+  cryptoUrl: config.cryptoUrl,
+  brapiToken: config.brapiToken
 });
-const priceService = demoMode
+const priceService = config.demoMode
   ? {
       runAll: async () => [
         { provider: "demo", updated: db.prices.list().length, errors: [] as string[] }
@@ -24,7 +23,7 @@ const priceService = demoMode
     }
   : livePriceService;
 const app = buildApp({ db, priceService });
-const stopScheduler = demoMode ? () => undefined : startScheduler(db, livePriceService);
+const stopScheduler = config.demoMode ? () => undefined : startScheduler(db, livePriceService);
 
 const close = async () => {
   stopScheduler();
@@ -36,6 +35,8 @@ process.on("SIGTERM", () => void close());
 
 await app.listen({
   host: "127.0.0.1",
-  port
+  port: config.port
 });
-console.log(`Projeto 41 API${demoMode ? " demo" : ""}: http://127.0.0.1:${port}`);
+console.log(
+  `Projeto 41 API${config.demoMode ? " demo" : ""}: http://127.0.0.1:${config.port}`
+);

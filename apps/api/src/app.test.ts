@@ -30,5 +30,28 @@ describe("API", () => {
     expect(portfolio.json().b3[0]).toMatchObject({ asset: "PETR4", quantity: 10 });
     await app.close();
   });
-});
 
+  it("returns a structured refresh failure instead of an internal error", async () => {
+    db = createDatabase(":memory:");
+    const app = buildApp({
+      db,
+      priceService: {
+        runAll: async () => {
+          throw new Error("provider unavailable");
+        }
+      }
+    });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/prices/refresh"
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({
+      results: [],
+      errors: ["provider unavailable"]
+    });
+    await app.close();
+  });
+});

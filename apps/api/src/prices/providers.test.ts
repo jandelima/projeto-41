@@ -22,6 +22,22 @@ describe("price providers", () => {
     expect(price).toMatchObject({ symbol: "PETR4", price: 42.5, currency: "BRL" });
   });
 
+  it("retries a B3 quote after a transient request failure", async () => {
+    let attempts = 0;
+    const fetcher = async () => {
+      attempts += 1;
+      if (attempts === 1) throw new Error("The operation was aborted due to timeout");
+      return Response.json({
+        results: [{ symbol: "BBAS3", regularMarketPrice: 25.4 }]
+      });
+    };
+
+    const price = await fetchB3Price("BBAS3", "token", fetcher as typeof fetch);
+
+    expect(attempts).toBe(2);
+    expect(price).toMatchObject({ symbol: "BBAS3", price: 25.4 });
+  });
+
   it("parses the official BCB PTAX response", async () => {
     const fetcher = async () =>
       Response.json({ value: [{ cotacaoVenda: 5.21, dataHoraCotacao: "2026-06-09 13:00:00.000" }] });

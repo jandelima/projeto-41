@@ -37,7 +37,7 @@ export async function fetchB3Price(
 ): Promise<PriceRecord> {
   const endpoint = new URL(`https://brapi.dev/api/quote/${encodeURIComponent(symbol)}`);
   if (token) endpoint.searchParams.set("token", token);
-  const response = await withTimeout(fetcher, endpoint);
+  const response = await withRetry(fetcher, endpoint);
   if (!response.ok) throw new Error(`brapi returned ${response.status} for ${symbol}`);
   const data = (await response.json()) as {
     results?: { symbol?: string; regularMarketPrice?: number; regularMarketTime?: string }[];
@@ -95,6 +95,14 @@ export async function fetchUsdBrl(
 
 async function withTimeout(fetcher: Fetcher, input: string | URL) {
   return fetcher(input, { signal: AbortSignal.timeout(10_000) });
+}
+
+async function withRetry(fetcher: Fetcher, input: string | URL) {
+  try {
+    return await withTimeout(fetcher, input);
+  } catch {
+    return withTimeout(fetcher, input);
+  }
 }
 
 function findTag(body: string, attribute: string, value: string) {
