@@ -85,6 +85,7 @@ type Dashboard = {
   usdBrl: number;
   categories: Record<string, number>;
   annualContributions: number;
+  annualReturn: number;
   history: Snapshot[];
   prices: Price[];
   portfolios: { crypto: Asset[]; b3: Asset[] };
@@ -237,11 +238,7 @@ export function App() {
 function DashboardPage({ data }: { data: Dashboard }) {
   const categoryData = categoryRows(data.categories).filter((item) => item.value > 0);
   const history = data.history.slice(-180);
-  const returnYear =
-    history.length > 1
-      ? (data.totalBrl - history[0]!.totalBrl - data.annualContributions) /
-        history[0]!.totalBrl
-      : 0;
+  const returnYear = data.annualReturn;
   const stale = data.prices.filter((price) => price.error).length;
 
   return (

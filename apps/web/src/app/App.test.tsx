@@ -22,6 +22,7 @@ describe("App", () => {
           usdBrl: 5,
           categories: {},
           annualContributions: 0,
+          annualReturn: 0,
           history: [],
           prices: [],
           portfolios: { crypto: [], b3: [] },

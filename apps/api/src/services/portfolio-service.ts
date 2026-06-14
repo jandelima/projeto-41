@@ -41,7 +41,7 @@ export function buildPortfolios(db: AppDatabase) {
   };
 }
 
-export function buildDashboard(db: AppDatabase) {
+export function buildDashboard(db: AppDatabase, now = new Date()) {
   const portfolios = buildPortfolios(db);
   const prices = db.prices.list();
   const usdBrl = db.prices.get("USDBRL")?.price ?? 0;
@@ -63,11 +63,18 @@ export function buildDashboard(db: AppDatabase) {
 
   const totalBrl = Object.values(categories).reduce((sum, value) => sum + value, 0);
   const contributions = db.contributions.list();
-  const currentYear = new Date().getFullYear();
+  const currentYear = now.getFullYear();
   const annualContributions = contributions
     .filter((item) => Number(item.date.slice(0, 4)) === currentYear)
     .reduce((sum, item) => sum + item.amount, 0);
   const history = db.snapshots.list();
+  const firstSnapshotOfYear = history.find((snapshot) =>
+    snapshot.date.startsWith(String(currentYear))
+  );
+  const annualReturn =
+    firstSnapshotOfYear && firstSnapshotOfYear.totalBrl > 0
+      ? (totalBrl - annualContributions) / firstSnapshotOfYear.totalBrl - 1
+      : 0;
 
   return {
     totalBrl,
@@ -75,6 +82,7 @@ export function buildDashboard(db: AppDatabase) {
     usdBrl,
     categories,
     annualContributions,
+    annualReturn,
     history,
     prices,
     portfolios,
@@ -106,4 +114,3 @@ function priceStatus(fetchedAt?: string, error?: string | null) {
   const age = Date.now() - new Date(fetchedAt).getTime();
   return age > 60 * 60 * 1000 ? "stale" : "current";
 }
-

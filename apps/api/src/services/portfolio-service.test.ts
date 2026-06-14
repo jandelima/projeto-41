@@ -48,4 +48,33 @@ describe("buildDashboard", () => {
     expect(dashboard.categories.crypto).toBe(300_000);
     expect(dashboard.categories.cash).toBe(1000);
   });
+
+  it("calculates annual return from the first snapshot of the year", () => {
+    db = createDatabase(":memory:");
+    db.positions.upsert({
+      category: "cash",
+      name: "Conta",
+      invested: 110,
+      currentValue: 110,
+      currency: "BRL"
+    });
+    db.snapshots.upsert({
+      date: "2026-01-01",
+      totalBrl: 100,
+      payload: { cash: 100 }
+    });
+    db.snapshots.upsert({
+      date: "2026-03-01",
+      totalBrl: 108,
+      payload: { cash: 108 }
+    });
+    db.contributions.create({
+      date: "2026-02-01",
+      amount: 20
+    });
+
+    const dashboard = buildDashboard(db, new Date("2026-06-14T12:00:00-03:00"));
+
+    expect(dashboard.annualReturn).toBeCloseTo(-0.1);
+  });
 });
