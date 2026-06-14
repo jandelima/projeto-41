@@ -43,6 +43,9 @@ export function createPriceService(
     const symbols = [
       ...new Set(db.operations.list("crypto").map((operation) => operation.asset))
     ];
+    if (!options.cryptoUrl) {
+      return { provider: "crypto", updated: 0, errors: [] as string[] };
+    }
     try {
       const quotes = await fetchCryptoPrices(
         symbols.map((symbol) => ({ symbol, slug: cryptoSlugs[symbol] ?? symbol.toLowerCase() })),

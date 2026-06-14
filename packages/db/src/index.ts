@@ -290,4 +290,20 @@ function migrate(db: Database.Database) {
       report TEXT NOT NULL
     );
   `);
+
+  const targetCount = db
+    .prepare("SELECT COUNT(*) AS count FROM allocation_targets")
+    .get() as { count: number };
+  if (targetCount.count === 0) {
+    db.exec(`
+      INSERT INTO allocation_targets(category, weight) VALUES
+        ('bitcoin', 0.25),
+        ('shitcoins', 0.05),
+        ('dolar', 0.10),
+        ('caixa_br', 0.10),
+        ('bolsa_brasil', 0.25),
+        ('renda_fixa', 0.15),
+        ('acoes_globais', 0.10);
+    `);
+  }
 }

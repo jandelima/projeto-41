@@ -22,7 +22,8 @@ export function loadServerConfig(
     databaseUrl: environment.DATABASE_URL ?? "./data/projeto41.sqlite",
     port: Number(environment.PORT ?? 3001),
     demoMode: environment.DEMO_MODE === "true",
-    cryptoUrl: environment.CRYPTO_PRICE_URL ?? "http://34.215.218.57:5000",
-    brapiToken: environment.BRAPI_TOKEN ?? ""
+    cryptoUrl: environment.CRYPTO_PRICE_URL ?? "",
+    brapiToken: environment.BRAPI_TOKEN ?? "",
+    timezone: environment.TZ ?? "America/Fortaleza"
   };
 }

@@ -1,4 +1,5 @@
 import cors from "@fastify/cors";
+import staticPlugin from "@fastify/static";
 import Fastify from "fastify";
 import {
   contributionSchema,
@@ -7,6 +8,7 @@ import {
 } from "@projeto41/contracts";
 import type { AppDatabase } from "@projeto41/db";
 import { z } from "zod";
+import type { IconService } from "./icons/icon-service.js";
 import { buildDashboard, buildPortfolios } from "./services/portfolio-service.js";
 
 type PriceService = {
@@ -15,13 +17,23 @@ type PriceService = {
 
 export function buildApp({
   db,
-  priceService
+  priceService,
+  iconService,
+  webRoot
 }: {
   db: AppDatabase;
   priceService: PriceService;
+  iconService?: IconService;
+  webRoot?: string;
 }) {
   const app = Fastify({ logger: false });
   app.register(cors, { origin: /^http:\/\/127\.0\.0\.1(?::\d+)?$/ });
+  if (webRoot) {
+    app.register(staticPlugin, {
+      root: webRoot,
+      index: ["index.html"]
+    });
+  }
 
   app.setErrorHandler((error, _request, reply) => {
     if (error instanceof z.ZodError) {
@@ -41,6 +53,21 @@ export function buildApp({
   });
 
   app.get("/api/health", async () => ({ ok: true }));
+
+  if (iconService) {
+    app.get("/api/icons/:kind/:key", async (request, reply) => {
+      const { kind, key } = z
+        .object({
+          kind: z.enum(["crypto", "b3", "institution"]),
+          key: z.string().min(1).max(80)
+        })
+        .parse(request.params);
+      const icon = await iconService.read(kind, key);
+      if (!icon) return reply.status(404).send({ error: "Icone indisponivel" });
+      reply.header("Cache-Control", "public, max-age=604800");
+      return reply.type(icon.contentType).send(icon.data);
+    });
+  }
   app.get("/api/dashboard", async () => buildDashboard(db));
   app.get("/api/portfolios", async () => buildPortfolios(db));
 

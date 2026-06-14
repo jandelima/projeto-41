@@ -16,6 +16,7 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "eslint .",
     "import": "npm run import -w @projeto41/api --",
+    "icons": "npm run icons -w @projeto41/api",
     "start": "npm run start -w @projeto41/api"
   },
   "devDependencies": {
@@ -28,6 +29,6 @@
     "vitest": "^3.2.3"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=22.13.0"
   }
 }

@@ -21,14 +21,16 @@ describe("loadServerConfig", () => {
       [
         "BRAPI_TOKEN=root-token",
         "CRYPTO_PRICE_URL=https://prices.example.test",
-        "PORT=4100"
+        "PORT=4100",
+        "TZ=America/Sao_Paulo"
       ].join("\n")
     );
 
     expect(loadServerConfig(temporaryDirectory, {})).toMatchObject({
       brapiToken: "root-token",
       cryptoUrl: "https://prices.example.test",
-      port: 4100
+      port: 4100,
+      timezone: "America/Sao_Paulo"
     });
   });
 

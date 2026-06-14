@@ -1,38 +1,126 @@
 # Projeto 41
 
-Webapp local para gestao da carteira financeira originalmente mantida em
-`Projeto 41.xlsx`.
+Webapp local para gestão de carteira financeira pessoal: cripto, ações da B3,
+dólar, caixa, reserva de emergência e renda fixa — com dashboard, histórico
+patrimonial, aportes, planejamento e alocação ideal.
+
+Roda inteiramente na sua máquina (somente `127.0.0.1`), sem login e sem nuvem.
+Os dados ficam num banco SQLite local e **nunca** são versionados.
+
+![Projeto 41](apps/web/public/logo.png)
 
 ## Requisitos
 
-- WSL
-- Node.js 22+
-- npm 10+
+- Node.js 22.13+ e npm 10+
+- Funciona em Linux, macOS, Windows e WSL
 
-## Configuracao
+## Instalação para desenvolvimento
 
 ```bash
+git clone <url-do-seu-repositorio> projeto-41
+cd projeto-41
 cp .env.example .env
-npm install
-npm run import -- --dry-run
-npm run import -- --confirm
+npm ci
 npm run dev
 ```
 
-Abra `http://127.0.0.1:5173`. A API escuta somente em
-`http://127.0.0.1:3001`.
+No PowerShell, use `Copy-Item .env.example .env` no lugar de `cp`.
 
-O token gratuito da brapi deve ser configurado em `BRAPI_TOKEN`. A planilha,
-o banco, backups e `.env` nunca sao versionados.
+Abra **http://127.0.0.1:5173**. A API sobe em `http://127.0.0.1:3001`.
 
-## Modo demonstracao
+Na primeira execução o banco (`data/projeto41.sqlite`) é criado sem dados
+financeiros e com metas de alocação genéricas, que podem ser ajustadas pela
+interface. Não é preciso ter ou importar uma planilha.
 
-Para gravar videos sem expor dados reais:
+## Execução de produção
+
+Depois de configurar o `.env`:
+
+```bash
+npm ci
+npm run build
+npm start
+```
+
+Abra **http://127.0.0.1:3001**. Nesse modo a própria API entrega o frontend
+compilado, então não é necessário manter o Vite em execução.
+
+Este projeto não possui autenticação e foi feito para uso local. Não exponha a
+porta diretamente na internet.
+
+## Como usar
+
+Tudo é cadastrado e editado direto no app:
+
+- **Cripto / Bolsa B3** — registre compras e vendas; quantidade, preço médio,
+  saldo, PnL, peso e alocação são calculados automaticamente. O preço médio
+  considera apenas as compras.
+- **Caixa e renda fixa** — posições manuais de dólar, caixa, reserva de
+  emergência e renda fixa, atualizadas por você.
+- **Aportes** — acompanhamento mensal dos aportes do ano.
+- **Planejamento** — simulador de patrimônio com aporte, rendimento e inflação.
+- **Alocação** — defina a meta de cada classe arrastando o slider e compare com
+  a carteira atual (a reserva fica fora da meta).
+- **Histórico** — evolução patrimonial com snapshots diários.
+
+Recursos extras na barra superior:
+
+- **Atualizar preços** — força um novo ciclo de cotações.
+- **Olho (privacidade)** — oculta valores e quantidades para gravar tela /
+  mostrar para outras pessoas; porcentagens e cotações públicas continuam
+  visíveis.
+- **Tema** — alterna entre escuro e claro.
+
+Os ícones de criptos e ações são baixados automaticamente de CDNs públicos na
+primeira vez que aparecem e ficam em cache local (`data/icons/`), funcionando
+offline depois.
+
+## Cotações
+
+| Fonte | Usada para | Configuração |
+| --- | --- | --- |
+| [brapi](https://brapi.dev) | Ações da B3 | `BRAPI_TOKEN` no `.env` (token gratuito) |
+| Banco Central (PTAX) | USD/BRL | automático, sem chave |
+| `CRYPTO_PRICE_URL` | Criptomoedas | opcional (veja `.env.example`) |
+| `TZ` | Horários das atualizações e snapshots | fuso IANA, como `America/Sao_Paulo` |
+
+Sem `BRAPI_TOKEN` as ações ficam sem cotação; sem `CRYPTO_PRICE_URL` as criptos
+ficam sem cotação. O restante do app continua funcionando normalmente, e você
+pode cadastrar operações de qualquer forma.
+
+## Dados e privacidade
+
+- Tudo fica em `data/` (banco SQLite + ícones). Essa pasta é ignorada pelo git.
+- O servidor escuta apenas em `127.0.0.1`; nada é exposto para a rede.
+- `Projeto 41.xlsx`, `.env`, banco e backups nunca são versionados.
+- Exportação manual dos dados: `GET http://127.0.0.1:3001/api/export`.
+
+## Modo demonstração
+
+Para gravar vídeos/prints sem expor dados reais:
 
 ```bash
 npm run demo
 ```
 
-Abra `http://127.0.0.1:5174`. Esse modo usa `data/projeto41-demo.sqlite`, API
-em `127.0.0.1:3101`, patrimonio sintetico de R$ 20 mil e nao consulta
-provedores externos. Cada inicializacao restaura os dados demonstrativos.
+Abre em **http://127.0.0.1:5174** com um banco isolado e patrimônio sintético,
+sem consultar provedores externos.
+
+## Desenvolvimento
+
+```bash
+npm run dev        # API + frontend com hot reload
+npm test           # testes (Vitest)
+npm run typecheck  # checagem de tipos
+npm run lint       # ESLint
+npm run build      # build de produção
+```
+
+## Stack
+
+Monorepo TypeScript: React + Vite no frontend, Fastify + better-sqlite3 no
+backend, Zod nos contratos, Recharts nos gráficos e Vitest nos testes.
+
+> O repositório inclui um importador legado (`npm run import`) que migra uma
+> planilha específica do autor original. Ele é opcional e não é necessário para
+> usar o app — comece do zero pela interface.

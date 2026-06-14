@@ -3,6 +3,10 @@ import "@testing-library/jest-dom/vitest";
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App.js";
+import { ConfirmProvider } from "../components/dialog.js";
+import { PrivacyProvider } from "../lib/privacy.js";
+import { ThemeProvider } from "../lib/theme.js";
+import { ToastProvider } from "../lib/toast.js";
 
 class ResizeObserver {
   observe() {}
@@ -10,6 +14,20 @@ class ResizeObserver {
   disconnect() {}
 }
 vi.stubGlobal("ResizeObserver", ResizeObserver);
+
+function renderApp() {
+  return render(
+    <ThemeProvider>
+      <PrivacyProvider>
+        <ToastProvider>
+          <ConfirmProvider>
+            <App />
+          </ConfirmProvider>
+        </ToastProvider>
+      </PrivacyProvider>
+    </ThemeProvider>
+  );
+}
 
 describe("App", () => {
   beforeEach(() => {
@@ -34,7 +52,7 @@ describe("App", () => {
   });
 
   it("renders the financial navigation and dashboard", async () => {
-    render(<App />);
+    renderApp();
     expect(await screen.findByText("Patrimônio total")).toBeInTheDocument();
     expect(screen.getByText("Cripto")).toBeInTheDocument();
     expect(screen.getByText("Planejamento")).toBeInTheDocument();
