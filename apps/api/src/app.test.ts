@@ -54,4 +54,20 @@ describe("API", () => {
     });
     await app.close();
   });
+
+  it("preserves known HTTP errors instead of masking them as internal errors", async () => {
+    db = createDatabase(":memory:");
+    const app = buildApp({ db, priceService: { runAll: async () => [] } });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/prices/refresh",
+      headers: { "content-type": "application/json" },
+      payload: ""
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json().error).not.toBe("Erro interno");
+    await app.close();
+  });
 });

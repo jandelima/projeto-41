@@ -27,6 +27,15 @@ export function buildApp({
     if (error instanceof z.ZodError) {
       return reply.status(400).send({ error: "Dados invalidos", details: error.flatten() });
     }
+    if (
+      error instanceof Error &&
+      "statusCode" in error &&
+      typeof error.statusCode === "number" &&
+      error.statusCode >= 400 &&
+      error.statusCode < 500
+    ) {
+      return reply.status(error.statusCode).send({ error: error.message });
+    }
     app.log.error(error);
     return reply.status(500).send({ error: "Erro interno" });
   });
