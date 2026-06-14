@@ -7,7 +7,7 @@ patrimonial, aportes, planejamento e alocação ideal.
 Roda inteiramente na sua máquina (somente `127.0.0.1`), sem login e sem nuvem.
 Os dados ficam num banco SQLite local e **nunca** são versionados.
 
-![Projeto 41](apps/web/public/logo.png)
+<img src="apps/web/public/logo.png" alt="Projeto 41" width="160">
 
 ## Requisitos
 
