@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 export function buildPowerShellArguments({
   distro,
   projectPath,
+  nodePath,
   scriptPath,
   logoPath
 }) {
@@ -18,6 +19,8 @@ export function buildPowerShellArguments({
     distro,
     "-ProjectPath",
     projectPath,
+    "-NodePath",
+    nodePath,
     "-LogoPath",
     logoPath
   ];
@@ -41,6 +44,7 @@ function main() {
     buildPowerShellArguments({
       distro,
       projectPath: root,
+      nodePath: process.execPath,
       scriptPath,
       logoPath
     }),

@@ -1,21 +1,36 @@
 import { closeSync, mkdirSync, openSync } from "node:fs";
 import { existsSync } from "node:fs";
 import { spawn } from "node:child_process";
-import { resolve } from "node:path";
+import { delimiter, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const APP_URL = "http://127.0.0.1:3001";
 const HEALTH_URL = `${APP_URL}/api/health`;
+
+export function buildRuntimeEnvironment(nodePath, environment = process.env) {
+  const nodeDirectory = dirname(nodePath);
+  const currentPath = environment.PATH ?? "";
+  return {
+    ...environment,
+    PATH: currentPath
+      ? `${nodeDirectory}${delimiter}${currentPath}`
+      : nodeDirectory
+  };
+}
 
 export async function launchProject({
   root,
   exists,
   isReady,
   runForeground,
-  startDetached,
-  waitForReady
+  runServer,
+  waitForReady,
+  openBrowser
 }) {
-  if (await isReady()) return { started: false };
+  if (await isReady()) {
+    await openBrowser();
+    return { started: false };
+  }
 
   if (!exists(resolve(root, "node_modules"))) {
     await runForeground("npm", ["ci"], root);
@@ -24,8 +39,15 @@ export async function launchProject({
     await runForeground("npm", ["run", "build"], root);
   }
 
-  await startDetached(root);
-  await waitForReady();
+  const server = runServer(root);
+  await Promise.race([
+    waitForReady(),
+    server.then(() => {
+      throw new Error("O servidor encerrou antes de ficar disponível.");
+    })
+  ]);
+  await openBrowser();
+  await server;
   return { started: true };
 }
 
@@ -54,20 +76,14 @@ export async function waitForServer({
   throw new Error("O servidor não iniciou. Consulte data/projeto41-launcher.log.");
 }
 
-function runWithLog(command, args, cwd, logDescriptor, detached = false) {
+function runWithLog(command, args, cwd, logDescriptor) {
   return new Promise((resolveCommand, rejectCommand) => {
     const child = spawn(command, args, {
       cwd,
-      detached,
-      env: process.env,
+      env: buildRuntimeEnvironment(process.execPath),
       stdio: ["ignore", logDescriptor, logDescriptor]
     });
     child.once("error", rejectCommand);
-    if (detached) {
-      child.unref();
-      resolveCommand();
-      return;
-    }
     child.once("exit", (code) => {
       if (code === 0) resolveCommand();
       else rejectCommand(new Error(`${command} ${args.join(" ")} terminou com código ${code}.`));
@@ -89,9 +105,16 @@ async function main() {
       isReady: () => isServerReady(),
       runForeground: (command, args, cwd) =>
         runWithLog(command, args, cwd, logDescriptor),
-      startDetached: (cwd) =>
-        runWithLog("npm", ["start"], cwd, logDescriptor, true),
-      waitForReady: () => waitForServer()
+      runServer: (cwd) =>
+        runWithLog("npm", ["start"], cwd, logDescriptor),
+      waitForReady: () => waitForServer(),
+      openBrowser: () =>
+        runWithLog(
+          "powershell.exe",
+          ["-NoProfile", "-Command", `Start-Process '${APP_URL}'`],
+          root,
+          logDescriptor
+        )
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

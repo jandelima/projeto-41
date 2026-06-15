@@ -6,6 +6,9 @@ param(
   [string]$ProjectPath,
 
   [Parameter(Mandatory = $true)]
+  [string]$NodePath,
+
+  [Parameter(Mandatory = $true)]
   [string]$LogoPath
 )
 
@@ -19,16 +22,15 @@ $shortcutPath = Join-Path $desktopPath "Projeto 41.lnk"
 
 New-Item -ItemType Directory -Path $installDirectory -Force | Out-Null
 
-$vbsDistro = $Distro.Replace('"', '""')
-$vbsProjectPath = $ProjectPath.Replace('"', '""')
+$vbsDistro = $Distro
+$vbsProjectPath = $ProjectPath
+$vbsNodePath = $NodePath
 $launcher = @"
 Set shell = CreateObject("WScript.Shell")
-command = "wsl.exe -d ""$vbsDistro"" --cd ""$vbsProjectPath"" node scripts/launch-project.mjs"
+command = "wsl.exe -d $vbsDistro --cd $vbsProjectPath $vbsNodePath scripts/launch-project.mjs"
 exitCode = shell.Run(command, 0, True)
 
-If exitCode = 0 Then
-  shell.Run "http://127.0.0.1:3001", 1, False
-Else
+If exitCode <> 0 Then
   MsgBox "Nao foi possivel iniciar o Projeto 41. Consulte data/projeto41-launcher.log.", 16, "Projeto 41"
 End If
 "@
