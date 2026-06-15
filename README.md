@@ -48,6 +48,26 @@ compilado, então não é necessário manter o Vite em execução.
 Este projeto não possui autenticação e foi feito para uso local. Não exponha a
 porta diretamente na internet.
 
+## Atalho na Área de Trabalho do Windows (WSL)
+
+Com o projeto instalado dentro do WSL, execute uma vez:
+
+```bash
+npm run windows:shortcut
+```
+
+O comando cria um atalho chamado **Projeto 41** na Área de Trabalho do Windows.
+Ao abrir o atalho:
+
+- o servidor é reutilizado se já estiver em execução;
+- dependências e frontend são preparados automaticamente se ainda não existirem;
+- o servidor inicia oculto em segundo plano;
+- o navegador abre em `http://127.0.0.1:3001`.
+
+Em caso de erro, consulte `data/projeto41-launcher.log`. Se o projeto for movido
+para outra pasta ou distribuição WSL, execute o comando novamente para recriar
+o atalho.
+
 ## Como usar
 
 Tudo é cadastrado e editado direto no app:
