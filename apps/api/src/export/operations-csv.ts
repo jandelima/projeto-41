@@ -1,6 +1,6 @@
 import type { Operation } from "@projeto41/contracts";
 
-const HEADER = ["asset", "date", "type", "quantity", "amount_usd", "unit_price_usd"];
+const HEADER = ["asset", "date", "type", "quantity", "amount", "unit_price", "currency"];
 
 export function buildOperationsCsv(operations: (Operation & { id?: number })[]): string {
   const rows = operations.map((operation) => {
@@ -11,7 +11,8 @@ export function buildOperationsCsv(operations: (Operation & { id?: number })[]):
       operation.type,
       operation.quantity,
       operation.total,
-      round(unitPrice)
+      round(unitPrice),
+      operation.currency
     ]
       .map(csvCell)
       .join(",");

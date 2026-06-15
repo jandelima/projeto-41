@@ -86,8 +86,8 @@ describe("API", () => {
     expect(response.statusCode).toBe(200);
     expect(response.headers["content-type"]).toContain("text/csv");
     expect(response.body.split("\r\n")).toEqual([
-      "asset,date,type,quantity,amount_usd,unit_price_usd",
-      "BTC,2026-06-09,buy,0.5,32500,65000"
+      "asset,date,type,quantity,amount,unit_price,currency",
+      "BTC,2026-06-09,buy,0.5,32500,65000,USD"
     ]);
     await app.close();
   });

@@ -25,9 +25,9 @@ describe("buildOperationsCsv", () => {
     ]);
 
     expect(csv.split("\r\n")).toEqual([
-      "asset,date,type,quantity,amount_usd,unit_price_usd",
-      "BTC,2026-06-09,buy,0.5,32500,65000",
-      "ETH,2026-06-10,sell,2,7000,3500"
+      "asset,date,type,quantity,amount,unit_price,currency",
+      "BTC,2026-06-09,buy,0.5,32500,65000,USD",
+      "ETH,2026-06-10,sell,2,7000,3500,USD"
     ]);
   });
 
@@ -44,6 +44,6 @@ describe("buildOperationsCsv", () => {
       }
     ]);
 
-    expect(csv.split("\r\n")[1]).toBe("BTC,2026-06-09,buy,0,0,0");
+    expect(csv.split("\r\n")[1]).toBe("BTC,2026-06-09,buy,0,0,0,USD");
   });
 });
