@@ -15,7 +15,7 @@ mkdirSync(dirname(databasePath), { recursive: true });
 const db = createDatabase(databasePath);
 const iconService = createIconService(resolve(dirname(databasePath), "icons"));
 const livePriceService = createPriceService(db, {
-  cryptoUrl: config.cryptoUrl,
+  coingeckoApiKey: config.coingeckoApiKey,
   brapiToken: config.brapiToken
 });
 const priceService = config.demoMode

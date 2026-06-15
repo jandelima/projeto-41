@@ -32,7 +32,7 @@ const cryptoSlugs: Record<string, string> = {
 export function createPriceService(
   db: AppDatabase,
   options: {
-    cryptoUrl: string;
+    coingeckoApiKey: string;
     brapiToken: string;
     fetcher?: typeof fetch;
   }
@@ -43,13 +43,13 @@ export function createPriceService(
     const symbols = [
       ...new Set(db.operations.list("crypto").map((operation) => operation.asset))
     ];
-    if (!options.cryptoUrl) {
+    if (symbols.length === 0) {
       return { provider: "crypto", updated: 0, errors: [] as string[] };
     }
     try {
       const quotes = await fetchCryptoPrices(
         symbols.map((symbol) => ({ symbol, slug: cryptoSlugs[symbol] ?? symbol.toLowerCase() })),
-        options.cryptoUrl,
+        options.coingeckoApiKey,
         fetcher
       );
       for (const quote of quotes) db.prices.upsert(quote);

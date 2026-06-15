@@ -4,17 +4,23 @@ type Fetcher = typeof fetch;
 
 export async function fetchCryptoPrices(
   assets: { slug: string; symbol: string }[],
-  url: string,
+  apiKey: string,
   fetcher: Fetcher = fetch
 ): Promise<PriceRecord[]> {
-  const response = await withTimeout(fetcher, url);
-  if (!response.ok) throw new Error(`Crypto provider returned ${response.status}`);
-  const body = await response.text();
+  if (assets.length === 0) return [];
+
+  const endpoint = new URL("https://api.coingecko.com/api/v3/simple/price");
+  endpoint.searchParams.set("ids", assets.map((asset) => asset.slug).join(","));
+  endpoint.searchParams.set("vs_currencies", "usd");
+
+  const headers = apiKey ? { "x-cg-demo-api-key": apiKey } : undefined;
+  const response = await withTimeout(fetcher, endpoint, headers);
+  if (!response.ok) throw new Error(`CoinGecko returned ${response.status}`);
+  const data = (await response.json()) as Record<string, { usd?: number }>;
   const fetchedAt = new Date().toISOString();
 
   return assets.map(({ slug, symbol }) => {
-    const tag = findTag(body, "id", slug);
-    const price = tag ? Number(tag.content.trim().replace(",", ".")) : Number.NaN;
+    const price = data[slug]?.usd ?? Number.NaN;
     if (!Number.isFinite(price) || price <= 0) {
       throw new Error(`Invalid crypto price for ${symbol}`);
     }
@@ -22,7 +28,7 @@ export async function fetchCryptoPrices(
       symbol,
       currency: "USD",
       price,
-      provider: "crypto-server",
+      provider: "coingecko",
       marketTime: null,
       fetchedAt,
       error: null
@@ -93,8 +99,12 @@ export async function fetchUsdBrl(
   throw new Error("BCB did not return a USD/BRL quote for the last seven days");
 }
 
-async function withTimeout(fetcher: Fetcher, input: string | URL) {
-  return fetcher(input, { signal: AbortSignal.timeout(10_000) });
+async function withTimeout(
+  fetcher: Fetcher,
+  input: string | URL,
+  headers?: Record<string, string>
+) {
+  return fetcher(input, { signal: AbortSignal.timeout(10_000), headers });
 }
 
 async function withRetry(fetcher: Fetcher, input: string | URL) {
@@ -103,14 +113,4 @@ async function withRetry(fetcher: Fetcher, input: string | URL) {
   } catch {
     return withTimeout(fetcher, input);
   }
-}
-
-function findTag(body: string, attribute: string, value: string) {
-  const escaped = value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const pattern = new RegExp(
-    `<([\\w:-]+)\\b[^>]*\\b${attribute}\\s*=\\s*(["'])${escaped}\\2[^>]*>([\\s\\S]*?)<\\/\\1>`,
-    "i"
-  );
-  const match = body.match(pattern);
-  return match ? { content: match[3] ?? "" } : null;
 }

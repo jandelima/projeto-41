@@ -2,15 +2,18 @@ import { describe, expect, it } from "vitest";
 import { fetchB3Price, fetchCryptoPrices, fetchUsdBrl } from "./providers.js";
 
 describe("price providers", () => {
-  it("parses the existing crypto server response", async () => {
-    const fetcher = async () =>
-      new Response('<prices><coin symbol = "BTC" id = "bitcoin">65000,5</coin></prices>');
+  it("parses the CoinGecko simple/price response", async () => {
+    const fetcher = async () => Response.json({ bitcoin: { usd: 65000.5 }, ethereum: { usd: 3200 } });
     const prices = await fetchCryptoPrices(
-      [{ slug: "bitcoin", symbol: "BTC" }],
-      "http://prices.test",
+      [
+        { slug: "bitcoin", symbol: "BTC" },
+        { slug: "ethereum", symbol: "ETH" }
+      ],
+      "demo-key",
       fetcher as typeof fetch
     );
-    expect(prices[0]).toMatchObject({ symbol: "BTC", price: 65000.5, currency: "USD" });
+    expect(prices[0]).toMatchObject({ symbol: "BTC", price: 65000.5, currency: "USD", provider: "coingecko" });
+    expect(prices[1]).toMatchObject({ symbol: "ETH", price: 3200 });
   });
 
   it("parses one B3 quote from brapi", async () => {
