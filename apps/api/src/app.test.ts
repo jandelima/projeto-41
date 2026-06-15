@@ -59,6 +59,71 @@ describe("API", () => {
     await app.close();
   });
 
+  it("auto-fetches the price of a new crypto asset on creation", async () => {
+    db = createDatabase(":memory:");
+    const fetched: string[] = [];
+    const app = buildApp({
+      db,
+      priceService: {
+        runAll: async () => [],
+        ensureCryptoPrice: async (symbol: string) => {
+          fetched.push(symbol);
+          return true;
+        }
+      }
+    });
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/api/operations",
+      payload: {
+        portfolio: "crypto",
+        type: "buy",
+        asset: "btc",
+        date: "2026-06-09",
+        quantity: 1,
+        total: 65000,
+        currency: "USD"
+      }
+    });
+
+    expect(created.statusCode).toBe(201);
+    expect(fetched).toEqual(["BTC"]);
+    await app.close();
+  });
+
+  it("does not auto-fetch crypto prices for a new B3 asset", async () => {
+    db = createDatabase(":memory:");
+    let calls = 0;
+    const app = buildApp({
+      db,
+      priceService: {
+        runAll: async () => [],
+        ensureCryptoPrice: async () => {
+          calls += 1;
+          return true;
+        }
+      }
+    });
+
+    await app.inject({
+      method: "POST",
+      url: "/api/operations",
+      payload: {
+        portfolio: "b3",
+        type: "buy",
+        asset: "PETR4",
+        date: "2026-06-09",
+        quantity: 10,
+        total: 400,
+        currency: "BRL"
+      }
+    });
+
+    expect(calls).toBe(0);
+    await app.close();
+  });
+
   it("returns a structured refresh failure instead of an internal error", async () => {
     db = createDatabase(":memory:");
     const app = buildApp({

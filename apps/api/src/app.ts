@@ -13,6 +13,7 @@ import { buildDashboard, buildPortfolios } from "./services/portfolio-service.js
 
 type PriceService = {
   runAll(): Promise<unknown>;
+  ensureCryptoPrice?(symbol: string): Promise<boolean>;
 };
 
 export function buildApp({
@@ -78,6 +79,9 @@ export function buildApp({
   app.post("/api/operations", async (request, reply) => {
     const operation = operationSchema.parse(request.body);
     const id = db.operations.create(operation);
+    if (operation.portfolio === "crypto" && priceService.ensureCryptoPrice) {
+      await priceService.ensureCryptoPrice(operation.asset);
+    }
     return reply.status(201).send({ id, portfolios: buildPortfolios(db) });
   });
   app.put("/api/operations/:id", async (request) => {

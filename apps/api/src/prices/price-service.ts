@@ -61,6 +61,24 @@ export function createPriceService(
     }
   }
 
+  async function ensureCryptoPrice(symbol: string) {
+    const existing = db.prices.get(symbol);
+    if (existing && existing.price > 0) return false;
+    try {
+      const [quote] = await fetchCryptoPrices(
+        [{ symbol, slug: cryptoSlugs[symbol] ?? symbol.toLowerCase() }],
+        options.coingeckoApiKey,
+        fetcher
+      );
+      if (quote) db.prices.upsert(quote);
+      return Boolean(quote);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown crypto provider error";
+      db.prices.markError(symbol, message, new Date().toISOString());
+      return false;
+    }
+  }
+
   async function runB3() {
     const symbols = [...new Set(db.operations.list("b3").map((operation) => operation.asset))];
     const errors: string[] = [];
@@ -93,6 +111,7 @@ export function createPriceService(
     runCrypto,
     runB3,
     runCurrency,
+    ensureCryptoPrice,
     runAll: () => Promise.all([runCrypto(), runB3(), runCurrency()])
   };
 }
