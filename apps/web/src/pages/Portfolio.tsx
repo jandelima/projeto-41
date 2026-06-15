@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, Coins, Pencil, Plus, Save, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Coins, Download, Pencil, Plus, Save, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { Drawer, useConfirm } from "../components/dialog.js";
@@ -94,6 +94,15 @@ export function PortfolioPage({
     toast.notify("Operação excluída");
   }
 
+  function exportOperations() {
+    const link = document.createElement("a");
+    link.href = "/api/export/operations.csv";
+    link.download = "operacoes-cripto.csv";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  }
+
   async function saveDividend(asset: string, amount: number) {
     await api(`/dividends/${asset}`, { method: "PUT", body: JSON.stringify({ amount }) });
     await onChanged();
@@ -103,6 +112,11 @@ export function PortfolioPage({
   return (
     <div className="portfolio">
       <SectionHeading title={title} subtitle={subtitle}>
+        {isCrypto && (
+          <Button variant="ghost" icon={Download} onClick={exportOperations}>
+            Exportar CSV
+          </Button>
+        )}
         <Button icon={Plus} onClick={() => { setEditing(null); setDrawer(true); }}>
           Nova operação
         </Button>

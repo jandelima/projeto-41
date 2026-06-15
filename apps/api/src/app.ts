@@ -9,6 +9,7 @@ import {
 import type { AppDatabase } from "@projeto41/db";
 import { z } from "zod";
 import type { IconService } from "./icons/icon-service.js";
+import { buildOperationsCsv } from "./export/operations-csv.js";
 import { buildDashboard, buildPortfolios } from "./services/portfolio-service.js";
 
 type PriceService = {
@@ -174,6 +175,12 @@ export function buildApp({
         errors: [error instanceof Error ? error.message : "Falha ao atualizar precos"]
       };
     }
+  });
+  app.get("/api/export/operations.csv", async (_request, reply) => {
+    const operations = db.operations.list("crypto");
+    reply.header("Content-Type", "text/csv; charset=utf-8");
+    reply.header("Content-Disposition", `attachment; filename="operacoes-cripto.csv"`);
+    return buildOperationsCsv(operations);
   });
   app.get("/api/export", async (_request, reply) => {
     reply.header("Content-Disposition", `attachment; filename="projeto41-export.json"`);
