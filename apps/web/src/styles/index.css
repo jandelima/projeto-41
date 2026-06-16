@@ -1513,8 +1513,6 @@ main {
 .eq-input input {
   width: 100%;
   min-width: 0;
-  padding: 11px 10px;
-  font-size: 13px;
   border: 0;
   background: transparent;
 }
@@ -1606,7 +1604,8 @@ main {
   animation: fade 0.16s ease;
 }
 .overlay-right {
-  place-items: stretch;
+  display: flex;
+  align-items: stretch;
   justify-content: flex-end;
   padding: 0;
 }
