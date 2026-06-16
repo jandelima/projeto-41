@@ -2,12 +2,17 @@ import type { PriceRecord } from "@projeto41/db";
 
 type Fetcher = typeof fetch;
 
+export type CryptoPriceResult = {
+  records: PriceRecord[];
+  errors: { symbol: string; message: string }[];
+};
+
 export async function fetchCryptoPrices(
   assets: { slug: string; symbol: string }[],
   apiKey: string,
   fetcher: Fetcher = fetch
-): Promise<PriceRecord[]> {
-  if (assets.length === 0) return [];
+): Promise<CryptoPriceResult> {
+  if (assets.length === 0) return { records: [], errors: [] };
 
   const endpoint = new URL("https://api.coingecko.com/api/v3/simple/price");
   endpoint.searchParams.set("ids", assets.map((asset) => asset.slug).join(","));
@@ -19,12 +24,15 @@ export async function fetchCryptoPrices(
   const data = (await response.json()) as Record<string, { usd?: number }>;
   const fetchedAt = new Date().toISOString();
 
-  return assets.map(({ slug, symbol }) => {
+  const records: PriceRecord[] = [];
+  const errors: { symbol: string; message: string }[] = [];
+  for (const { slug, symbol } of assets) {
     const price = data[slug]?.usd ?? Number.NaN;
     if (!Number.isFinite(price) || price <= 0) {
-      throw new Error(`Invalid crypto price for ${symbol}`);
+      errors.push({ symbol, message: `Invalid crypto price for ${symbol}` });
+      continue;
     }
-    return {
+    records.push({
       symbol,
       currency: "USD",
       price,
@@ -32,8 +40,9 @@ export async function fetchCryptoPrices(
       marketTime: null,
       fetchedAt,
       error: null
-    };
-  });
+    });
+  }
+  return { records, errors };
 }
 
 export type CryptoSearchResult = {

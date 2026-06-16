@@ -28,6 +28,7 @@ export function CryptoAssetSearch({
     if (!term) {
       setResults([]);
       setLoading(false);
+      setOpen(false);
       return;
     }
     let cancelled = false;
@@ -98,6 +99,7 @@ export function CryptoAssetSearch({
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           onFocus={() => results.length > 0 && setOpen(true)}
+          onBlur={() => setOpen(false)}
           onKeyDown={onKeyDown}
           placeholder="Buscar símbolo ou nome (BTC, bitcoin…)"
           autoFocus={autoFocus}
@@ -115,6 +117,7 @@ export function CryptoAssetSearch({
                 type="button"
                 className={index === active ? "active" : ""}
                 onMouseEnter={() => setActive(index)}
+                onMouseDown={(event) => event.preventDefault()}
                 onClick={() => choose(result)}
               >
                 <AssetIcon src={portfolioIconUrl("crypto", result.symbol)} label={result.symbol} />

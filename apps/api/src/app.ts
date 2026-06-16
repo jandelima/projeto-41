@@ -76,8 +76,8 @@ export function buildApp({
   app.get("/api/portfolios", async () => buildPortfolios(db));
 
   const cryptoAssetSchema = z.object({
-    slug: z.string().trim().min(1).optional(),
-    name: z.string().trim().min(1).optional()
+    slug: z.string().trim().optional(),
+    name: z.string().trim().optional()
   });
 
   function rememberCryptoAsset(
@@ -87,7 +87,7 @@ export function buildApp({
     if (operation.portfolio !== "crypto") return;
     const { slug, name } = cryptoAssetSchema.parse(body);
     if (!slug) return;
-    db.cryptoAssets.upsert({ symbol: operation.asset, slug, name: name ?? operation.asset });
+    db.cryptoAssets.upsert({ symbol: operation.asset, slug, name: name || operation.asset });
   }
 
   app.get("/api/operations", async (request) => {

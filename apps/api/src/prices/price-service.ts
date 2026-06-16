@@ -56,13 +56,15 @@ export function createPriceService(
       return { provider: "crypto", updated: 0, errors: [] as string[] };
     }
     try {
-      const quotes = await fetchCryptoPrices(
+      const { records, errors } = await fetchCryptoPrices(
         symbols.map((symbol) => ({ symbol, slug: slugFor(symbol) })),
         options.coingeckoApiKey,
         fetcher
       );
-      for (const quote of quotes) db.prices.upsert(quote);
-      return { provider: "crypto", updated: quotes.length, errors: [] as string[] };
+      const erroredAt = new Date().toISOString();
+      for (const quote of records) db.prices.upsert(quote);
+      for (const { symbol, message } of errors) db.prices.markError(symbol, message, erroredAt);
+      return { provider: "crypto", updated: records.length, errors: errors.map((e) => e.message) };
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown crypto provider error";
       for (const symbol of symbols) db.prices.markError(symbol, message, new Date().toISOString());
@@ -74,13 +76,19 @@ export function createPriceService(
     const existing = db.prices.get(symbol);
     if (existing && existing.price > 0) return false;
     try {
-      const [quote] = await fetchCryptoPrices(
+      const { records, errors } = await fetchCryptoPrices(
         [{ symbol, slug: slugFor(symbol) }],
         options.coingeckoApiKey,
         fetcher
       );
-      if (quote) db.prices.upsert(quote);
-      return Boolean(quote);
+      const [quote] = records;
+      if (quote) {
+        db.prices.upsert(quote);
+        return true;
+      }
+      const erroredAt = new Date().toISOString();
+      for (const { message } of errors) db.prices.markError(symbol, message, erroredAt);
+      return false;
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown crypto provider error";
       db.prices.markError(symbol, message, new Date().toISOString());

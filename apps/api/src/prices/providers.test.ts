@@ -9,7 +9,7 @@ import {
 describe("price providers", () => {
   it("parses the CoinGecko simple/price response", async () => {
     const fetcher = async () => Response.json({ bitcoin: { usd: 65000.5 }, ethereum: { usd: 3200 } });
-    const prices = await fetchCryptoPrices(
+    const { records, errors } = await fetchCryptoPrices(
       [
         { slug: "bitcoin", symbol: "BTC" },
         { slug: "ethereum", symbol: "ETH" }
@@ -17,8 +17,24 @@ describe("price providers", () => {
       "demo-key",
       fetcher as typeof fetch
     );
-    expect(prices[0]).toMatchObject({ symbol: "BTC", price: 65000.5, currency: "USD", provider: "coingecko" });
-    expect(prices[1]).toMatchObject({ symbol: "ETH", price: 3200 });
+    expect(records[0]).toMatchObject({ symbol: "BTC", price: 65000.5, currency: "USD", provider: "coingecko" });
+    expect(records[1]).toMatchObject({ symbol: "ETH", price: 3200 });
+    expect(errors).toEqual([]);
+  });
+
+  it("isolates a coin with a missing price instead of failing the batch", async () => {
+    const fetcher = async () => Response.json({ bitcoin: { usd: 65000.5 } });
+    const { records, errors } = await fetchCryptoPrices(
+      [
+        { slug: "bitcoin", symbol: "BTC" },
+        { slug: "delisted-coin", symbol: "DEAD" }
+      ],
+      "demo-key",
+      fetcher as typeof fetch
+    );
+    expect(records).toHaveLength(1);
+    expect(records[0]).toMatchObject({ symbol: "BTC", price: 65000.5 });
+    expect(errors).toEqual([{ symbol: "DEAD", message: "Invalid crypto price for DEAD" }]);
   });
 
   it("parses one B3 quote from brapi", async () => {
