@@ -363,17 +363,19 @@ main {
   display: flex;
   flex-direction: column;
   gap: 18px;
-  max-height: 52vh;
+  max-height: 64vh;
   overflow-y: auto;
   margin: 0 -6px;
   padding: 0 6px;
 }
 .ticker-settings-group {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 2px 12px;
+  align-items: start;
 }
 .ticker-settings-grouphead {
+  grid-column: 1 / -1;
   font-size: 10px;
   letter-spacing: 0.12em;
   text-transform: uppercase;

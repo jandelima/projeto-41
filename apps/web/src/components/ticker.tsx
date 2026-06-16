@@ -94,7 +94,7 @@ export function TickerSettings({
   const visible = candidates.filter((item) => !hidden.has(item.symbol)).length;
 
   return (
-    <Modal title="Ativos na faixa" onClose={onClose} width={440}>
+    <Modal title="Ativos na faixa" onClose={onClose} width={640}>
       <p className="ticker-settings-sub">
         {visible} de {candidates.length} ativos aparecendo na faixa
       </p>
