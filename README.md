@@ -9,6 +9,16 @@ Os dados ficam num banco SQLite local e **nunca** são versionados.
 
 <img src="apps/web/public/logo.png" alt="Projeto 41" width="160">
 
+## Últimos updates
+
+Destaques recentes — histórico completo e versões em
+[`CHANGELOG.md`](CHANGELOG.md).
+
+- Cadastro de operação flexível: preencha dois dos três campos e o terceiro é
+  calculado automaticamente.
+- Carteira cripto: operação em USD ou BRL e opção de descontar a taxa Binance.
+- Seletor de data e steppers numéricos no tema do app.
+
 ## Requisitos
 
 - Node.js 22.13+ e npm 10+

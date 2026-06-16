@@ -305,6 +305,7 @@ export function App() {
                 portfolio="crypto"
                 assets={dashboard?.portfolios.crypto ?? []}
                 investableTotal={dashboard ? dashboard.totalBrl - dashboard.reserveBrl : 0}
+                usdBrl={dashboard?.usdBrl ?? 0}
                 onChanged={loadDashboard}
               />
             )}
