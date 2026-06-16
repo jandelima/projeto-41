@@ -453,10 +453,7 @@ function OperationDrawer({
         {isCrypto && (
           <label className="fee-toggle">
             <input type="checkbox" checked={useFee} onChange={(event) => setUseFee(event.target.checked)} />
-            <span className="fee-text">
-              <strong>Descontar taxa Binance</strong>
-              <small>0,1% sobre o valor da ordem</small>
-            </span>
+            <span>Descontar taxa Binance (0,1%)</span>
           </label>
         )}
         <div className="op-preview">

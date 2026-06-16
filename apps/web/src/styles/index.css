@@ -1503,6 +1503,7 @@ main {
 .eq-input {
   display: flex;
   align-items: center;
+  min-width: 0;
   border: 1px solid var(--border-strong);
   border-radius: 10px;
   background: var(--input-bg);
@@ -1511,6 +1512,9 @@ main {
 }
 .eq-input input {
   width: 100%;
+  min-width: 0;
+  padding: 11px 10px;
+  font-size: 13px;
   border: 0;
   background: transparent;
 }
@@ -1562,50 +1566,31 @@ main {
   cursor: not-allowed;
 }
 
-/* Checkbox da taxa Binance. */
+/* Checkbox da taxa Binance — discreto, alinhado ao restante do formulário. */
 .fee-toggle {
   display: flex;
   align-items: center;
-  gap: 11px;
-  padding: 12px 14px;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  background: var(--surface-2);
+  gap: 8px;
+  margin-top: -4px;
+  font-size: 12px;
+  color: var(--text-muted);
   cursor: pointer;
   transition: var(--transition);
 }
 .fee-toggle:hover {
-  border-color: var(--border-strong);
-}
-.fee-toggle:has(input:checked) {
-  border-color: color-mix(in srgb, var(--accent) 45%, var(--border-strong));
-  background: var(--accent-soft);
-}
-.fee-toggle input {
-  width: 18px;
-  height: 18px;
-  accent-color: var(--accent);
-  cursor: pointer;
-}
-.fee-text {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-.fee-text strong {
-  font-size: 13px;
-  font-weight: 600;
   color: var(--text);
 }
-.fee-text small {
-  font-size: 11px;
-  color: var(--text-muted);
+.fee-toggle input {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--accent);
+  cursor: pointer;
 }
 .op-fee {
   display: block;
   margin-top: 3px;
   font-size: 11px;
-  color: var(--warning);
+  color: var(--text-faint);
 }
 
 /* ---------- Dialogs ---------- */
@@ -1666,6 +1651,7 @@ main {
 .drawer-body {
   padding: 0 22px;
   overflow-y: auto;
+  overflow-x: hidden;
   flex: 1;
 }
 .drawer-foot {
