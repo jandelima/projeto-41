@@ -26,8 +26,8 @@ import { PlanningPage } from "../pages/Planning.js";
 import { PortfolioPage } from "../pages/Portfolio.js";
 import { PositionsPage } from "../pages/Positions.js";
 import { Loading } from "../components/ui.js";
-import { Ticker } from "../components/ticker.js";
-import type { TickerItem } from "../components/ticker.js";
+import { Ticker, TickerSettings } from "../components/ticker.js";
+import type { TickerCandidate } from "../components/ticker.js";
 import { api } from "../lib/api.js";
 import { relativeTime } from "../lib/format.js";
 import { portfolioIconUrl } from "../lib/icons.js";
@@ -74,6 +74,18 @@ const nav: { group: string; items: NavItem[] }[] = [
 
 const allItems = nav.flatMap((section) => section.items);
 
+const TICKER_HIDDEN_KEY = "projeto41-ticker-hidden";
+
+function readTickerHidden(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = window.localStorage.getItem(TICKER_HIDDEN_KEY);
+    return new Set<string>(raw ? (JSON.parse(raw) as string[]) : []);
+  } catch {
+    return new Set();
+  }
+}
+
 export function App() {
   const { theme, toggle } = useTheme();
   const privacy = usePrivacy();
@@ -87,6 +99,21 @@ export function App() {
   const [error, setError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [tickerHidden, setTickerHidden] = useState<Set<string>>(readTickerHidden);
+  const [tickerOpen, setTickerOpen] = useState(false);
+
+  useEffect(() => {
+    window.localStorage.setItem(TICKER_HIDDEN_KEY, JSON.stringify([...tickerHidden]));
+  }, [tickerHidden]);
+
+  const toggleTickerAsset = useCallback((symbol: string) => {
+    setTickerHidden((current) => {
+      const next = new Set(current);
+      if (next.has(symbol)) next.delete(symbol);
+      else next.add(symbol);
+      return next;
+    });
+  }, []);
 
   const loadDashboard = useCallback(async () => {
     try {
@@ -145,7 +172,7 @@ export function App() {
 
   const current = allItems.find((item) => item.id === page)!;
 
-  const tickerItems = useMemo<TickerItem[]>(() => {
+  const tickerCandidates = useMemo<TickerCandidate[]>(() => {
     if (!dashboard) return [];
     const tagged = [
       ...dashboard.portfolios.crypto.map((asset) => ({ asset, portfolio: "crypto" as const })),
@@ -159,9 +186,15 @@ export function App() {
         price: asset.price,
         currency: asset.priceCurrency,
         change: asset.dayChange,
-        icon: portfolioIconUrl(portfolio, asset.asset)
+        icon: portfolioIconUrl(portfolio, asset.asset),
+        portfolio
       }));
   }, [dashboard]);
+
+  const tickerItems = useMemo(
+    () => tickerCandidates.filter((item) => !tickerHidden.has(item.symbol)),
+    [tickerCandidates, tickerHidden]
+  );
 
   return (
     <div className="app-shell">
@@ -222,7 +255,9 @@ export function App() {
       {mobileOpen && <div className="scrim" onClick={() => setMobileOpen(false)} />}
 
       <main>
-        <Ticker items={tickerItems} />
+        {tickerCandidates.length > 0 && (
+          <Ticker items={tickerItems} onConfigure={() => setTickerOpen(true)} />
+        )}
         <header className="topbar">
           <button className="menu-button" onClick={() => setMobileOpen(true)} aria-label="Abrir menu">
             <Menu />
@@ -291,6 +326,16 @@ export function App() {
           </div>
         )}
       </main>
+
+      {tickerOpen && (
+        <TickerSettings
+          candidates={tickerCandidates}
+          hidden={tickerHidden}
+          onToggle={toggleTickerAsset}
+          onShowAll={() => setTickerHidden(new Set())}
+          onClose={() => setTickerOpen(false)}
+        />
+      )}
     </div>
   );
 }
