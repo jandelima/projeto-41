@@ -516,6 +516,7 @@ main {
   margin-top: 5px;
   font-size: 18px;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 .stat {
   padding: 20px;
@@ -551,6 +552,7 @@ main {
   font-size: 24px;
   font-weight: 700;
   letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
 }
 .stat.positive .stat-value {
   color: var(--positive);
@@ -618,6 +620,7 @@ main {
   font-weight: 800;
   letter-spacing: -0.035em;
   margin: 8px 0 0;
+  font-variant-numeric: tabular-nums;
 }
 .hero-meta {
   display: flex;
@@ -636,14 +639,14 @@ main {
 .hero-stats {
   display: flex;
   margin-top: auto;
-  padding-top: 14px;
+  padding-top: 18px;
 }
 .hero-stat {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  padding: 2px 16px;
+  gap: 5px;
+  padding: 2px 18px;
 }
 .hero-stat:first-child {
   padding-left: 0;
@@ -652,13 +655,15 @@ main {
   border-left: 1px solid var(--border);
 }
 .hero-stat span {
-  font-size: 11px;
+  font-size: 12px;
+  font-weight: 600;
   color: var(--text-muted);
 }
 .hero-stat strong {
-  font-size: 16px;
+  font-size: 20px;
   font-weight: 700;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Compact KPI cards */
@@ -706,6 +711,7 @@ main {
   font-weight: 700;
   letter-spacing: -0.02em;
   margin-top: 1px;
+  font-variant-numeric: tabular-nums;
 }
 .kpi.positive .kpi-value {
   color: var(--positive);
@@ -1072,6 +1078,70 @@ main {
   color: var(--negative) !important;
 }
 
+/* ---------- Number polish (tabular nums + flash on change) ---------- */
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .flash-up {
+    animation: flash-up 0.9s ease-out;
+  }
+  .flash-down {
+    animation: flash-down 0.9s ease-out;
+  }
+}
+@keyframes flash-up {
+  0%,
+  12% {
+    color: var(--positive);
+  }
+}
+@keyframes flash-down {
+  0%,
+  12% {
+    color: var(--negative);
+  }
+}
+
+/* ---------- Entrance: staggered reveal of grid children ---------- */
+@media (prefers-reduced-motion: no-preference) {
+  .stagger > * {
+    opacity: 0;
+    animation: rise 0.5s cubic-bezier(0.21, 0.6, 0.35, 1) forwards;
+  }
+  .stagger > *:nth-child(1) {
+    animation-delay: 0.04s;
+  }
+  .stagger > *:nth-child(2) {
+    animation-delay: 0.1s;
+  }
+  .stagger > *:nth-child(3) {
+    animation-delay: 0.16s;
+  }
+  .stagger > *:nth-child(4) {
+    animation-delay: 0.22s;
+  }
+  .stagger > *:nth-child(5) {
+    animation-delay: 0.28s;
+  }
+  .stagger > *:nth-child(6) {
+    animation-delay: 0.34s;
+  }
+  .stagger > *:nth-child(n + 7) {
+    animation-delay: 0.4s;
+  }
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* ---------- Forms ---------- */
 .stack {
   display: flex;
@@ -1358,6 +1428,7 @@ main {
   margin-left: auto;
   font-size: 17px;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 .position-items {
   display: flex;

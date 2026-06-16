@@ -1,7 +1,7 @@
 import { ArrowDownRight, ArrowUpRight, CircleDollarSign, PiggyBank, Wallet } from "lucide-react";
 import { useMemo, useState } from "react";
 import { AreaTrend, Donut } from "../components/charts.js";
-import { Card, Delta, Kpi, Panel } from "../components/ui.js";
+import { AnimatedNumber, Card, Delta, Kpi, Panel } from "../components/ui.js";
 import { fx, money, percent, signedPercent, usd } from "../lib/format.js";
 import type { Dashboard, Snapshot } from "../lib/types.js";
 
@@ -67,7 +67,7 @@ export function DashboardPage({ data }: { data: Dashboard }) {
   const peak = data.history.reduce((max, item) => Math.max(max, item.totalBrl), 0);
 
   return (
-    <div className="dashboard">
+    <div className="dashboard stagger">
       <section className="hero-grid">
         <Card glow className="hero-card">
           <div className="hero-top">
@@ -76,7 +76,9 @@ export function DashboardPage({ data }: { data: Dashboard }) {
             </span>
             <Delta value={dayChange} suffix="hoje" />
           </div>
-          <strong className="hero-value">{money(data.totalBrl)}</strong>
+          <strong className="hero-value">
+            <AnimatedNumber value={data.totalBrl} format={money} />
+          </strong>
           <div className="hero-meta">
             <span>{usd(data.totalUsd)}</span>
             <span className="dot-sep" />
@@ -86,39 +88,41 @@ export function DashboardPage({ data }: { data: Dashboard }) {
             <div className="hero-stat">
               <span>30 dias</span>
               <strong className={monthChange >= 0 ? "positive-text" : "negative-text"}>
-                {signedPercent(monthChange)}
+                <AnimatedNumber value={monthChange} format={signedPercent} countUp={false} />
               </strong>
             </div>
             <div className="hero-stat">
               <span>12 meses</span>
               <strong className={yearChange >= 0 ? "positive-text" : "negative-text"}>
-                {signedPercent(yearChange)}
+                <AnimatedNumber value={yearChange} format={signedPercent} countUp={false} />
               </strong>
             </div>
             <div className="hero-stat">
               <span>Pico histórico</span>
-              <strong>{money(peak)}</strong>
+              <strong>
+                <AnimatedNumber value={peak} format={money} />
+              </strong>
             </div>
           </div>
         </Card>
-        <div className="kpi-stack">
+        <div className="kpi-stack stagger">
           <Kpi
             icon={data.annualReturn >= 0 ? ArrowUpRight : ArrowDownRight}
             label="Rentabilidade no ano"
-            value={percent(data.annualReturn)}
+            value={<AnimatedNumber value={data.annualReturn} format={percent} />}
             tone={data.annualReturn >= 0 ? "positive" : "negative"}
             detail="descontando aportes"
           />
           <Kpi
             icon={CircleDollarSign}
             label="Aportes no ano"
-            value={money(data.annualContributions)}
+            value={<AnimatedNumber value={data.annualContributions} format={money} />}
             detail={`${new Date().getFullYear()}`}
           />
           <Kpi
             icon={PiggyBank}
             label="Reserva de emergência"
-            value={money(data.reserveBrl)}
+            value={<AnimatedNumber value={data.reserveBrl} format={money} />}
             detail={`${percent(data.totalBrl ? data.reserveBrl / data.totalBrl : 0)} do patrimônio`}
           />
         </div>

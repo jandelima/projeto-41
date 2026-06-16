@@ -108,7 +108,7 @@ export function PortfolioPage({
         </Button>
       </SectionHeading>
 
-      <div className="summary-row">
+      <div className="summary-row stagger">
         <MiniStat label="Saldo atual" value={money(totalBalance)} />
         <MiniStat label="Ativos" value={String(held.length)} />
         {isCrypto ? (
