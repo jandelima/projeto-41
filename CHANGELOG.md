@@ -1,0 +1,39 @@
+# Changelog
+
+Todas as mudanças relevantes deste projeto são documentadas neste arquivo.
+
+O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o
+projeto adota [Versionamento Semântico](https://semver.org/lang/pt-BR/).
+
+Mudanças ainda não lançadas ficam em **[Unreleased]**. Ao publicar, renomeie
+essa seção para a nova versão com a data (ex.: `## [0.3.0] - 2026-07-01`) e abra
+um novo `[Unreleased]` vazio no topo.
+
+## [Unreleased]
+
+## [0.2.0] - 2026-06-16
+
+### Added
+
+- Cadastro de operação flexível: preencha dois dos três campos
+  (Quantidade × Preço = Total) e o terceiro é calculado automaticamente, com o
+  campo "auto" destacado.
+- Carteira cripto: alterne a moeda da operação entre USD e BRL (converte para
+  USD ao salvar) e opção de descontar a taxa Binance de 0,1%.
+- Seletor de data próprio (calendário no tema) no drawer de operação.
+
+### Changed
+
+- Steppers numéricos customizados no tema, com passo em centavos para preço e
+  total.
+
+### Fixed
+
+- Drawer de operação fixado à borda direita da tela.
+
+## [0.1.0] - 2026-06-09
+
+### Added
+
+- Versão inicial: dashboard, carteiras cripto e B3, posições manuais, aportes,
+  planejamento, alocação ideal e histórico patrimonial com snapshots diários.
