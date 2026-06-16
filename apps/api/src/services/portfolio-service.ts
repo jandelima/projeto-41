@@ -110,11 +110,10 @@ export function createDailySnapshot(db: AppDatabase, date: string) {
 }
 
 // Variação do dia por ativo, como razão (0.012 = +1,2%) ou null quando indisponível.
-// Usa o percentual do provedor (brapi) quando há; senão, compara com o "fechamento" do
-// dia anterior gravado no baseline (prevPrice/prevDay), que só existe a partir do 2º dia.
+// Calculada sempre aqui: preço atual vs. o "fechamento" do dia anterior gravado no
+// baseline (prevPrice/prevDay). Não usamos percentual de provedor externo.
 function dayChange(price?: PriceRecord): number | null {
   if (!price || price.error) return null;
-  if (typeof price.changePercent === "number") return price.changePercent;
   const today = price.fetchedAt.slice(0, 10);
   if (price.prevPrice && price.prevPrice > 0 && price.prevDay && price.prevDay < today) {
     return price.price / price.prevPrice - 1;
