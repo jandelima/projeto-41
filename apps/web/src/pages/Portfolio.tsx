@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, Coins, Pencil, Plus, Save, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Coins, Pencil, Plus, Save, Sparkles, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { Drawer, useConfirm } from "../components/dialog.js";
@@ -261,33 +261,36 @@ function OperationDrawer({
   const [type, setType] = useState<"buy" | "sell">(initial?.type ?? "buy");
   const [asset, setAsset] = useState(initial?.asset ?? "");
   const [date, setDate] = useState(initial && initial.date !== "1900-01-01" ? initial.date : new Date().toISOString().slice(0, 10));
-  const [quantity, setQuantity] = useState(initialQty ? String(initialQty) : "");
-  const [unit, setUnit] = useState(initialQty > 0 ? String(initialTotal / initialQty) : "");
-  const [total, setTotal] = useState(initialTotal ? String(initialTotal) : "");
-  const [lastEdited, setLastEdited] = useState<"unit" | "total">(isCrypto ? "total" : "unit");
+
+  // Quantidade × Preço = Total. O usuário preenche dois campos quaisquer e o
+  // terceiro é resolvido sozinho. `recent` guarda a ordem de edição: o último
+  // item é o campo atualmente calculado (o "stale").
+  const [fields, setFields] = useState<Record<TradeField, string>>(() => ({
+    qty: initialQty ? String(initialQty) : "",
+    unit: initialQty > 0 ? String(round(initialTotal / initialQty)) : "",
+    total: initialTotal ? String(initialTotal) : ""
+  }));
+  const [recent, setRecent] = useState<TradeField[]>(
+    initial || isCrypto ? ["qty", "total", "unit"] : ["qty", "unit", "total"]
+  );
+  const solved = recent[2] as TradeField;
   const [saving, setSaving] = useState(false);
 
-  function recalc(nextQty: string, nextUnit: string, nextTotal: string, edited: "unit" | "total" | "qty") {
-    const q = Number(nextQty);
-    if (edited === "unit") {
-      setUnit(nextUnit);
-      setTotal(q > 0 && nextUnit !== "" ? String(round(q * Number(nextUnit))) : nextTotal);
-      setLastEdited("unit");
-    } else if (edited === "total") {
-      setTotal(nextTotal);
-      setUnit(q > 0 && nextTotal !== "" ? String(round(Number(nextTotal) / q)) : nextUnit);
-      setLastEdited("total");
-    } else {
-      setQuantity(nextQty);
-      if (lastEdited === "unit") setTotal(q > 0 && nextUnit !== "" ? String(round(q * Number(nextUnit))) : nextTotal);
-      else setUnit(q > 0 && nextTotal !== "" ? String(round(Number(nextTotal) / q)) : nextUnit);
-    }
+  function editField(field: TradeField, raw: string) {
+    const next = { ...fields, [field]: raw };
+    const order: TradeField[] = [field, ...recent.filter((f) => f !== field)];
+    const target = order[2] as TradeField;
+    next[target] = solveTrade(target, next);
+    setFields(next);
+    setRecent(order);
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!asset.trim() || Number(quantity) <= 0 || Number(total) < 0) {
-      toast.notify("Preencha ativo, quantidade e valor", "error");
+    const quantity = Number(fields.qty);
+    const total = Number(fields.total);
+    if (!asset.trim() || !(quantity > 0) || !Number.isFinite(total) || total < 0) {
+      toast.notify("Preencha o ativo e ao menos dois dos três valores", "error");
       return;
     }
     setSaving(true);
@@ -297,8 +300,8 @@ function OperationDrawer({
         type,
         asset: asset.trim().toUpperCase(),
         date,
-        quantity: Number(quantity),
-        total: Number(total),
+        quantity,
+        total,
         currency: code,
         notes: initial?.notes ?? ""
       };
@@ -314,8 +317,8 @@ function OperationDrawer({
     }
   }
 
-  const previewQty = Number(quantity) || 0;
-  const previewTotal = Number(total) || 0;
+  const previewQty = Number(fields.qty) || 0;
+  const previewTotal = Number(fields.total) || 0;
 
   return (
     <Drawer
@@ -361,32 +364,30 @@ function OperationDrawer({
         <Field label="Data">
           <input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
         </Field>
-        <div className="field-row">
-          <Field label="Quantidade">
-            <NumberInput
-              value={quantity}
-              min="0"
-              onChange={(event) => recalc(event.target.value, unit, total, "qty")}
-              placeholder="0"
-            />
-          </Field>
-          <Field label={`Preço unitário (${code})`}>
-            <NumberInput
-              value={unit}
-              min="0"
-              onChange={(event) => recalc(quantity, event.target.value, total, "unit")}
-              placeholder="0"
-            />
-          </Field>
-        </div>
-        <Field label={`Valor total (${code})`} hint="Ajuste o total diretamente se houver taxas.">
-          <NumberInput
-            value={total}
-            min="0"
-            onChange={(event) => recalc(quantity, unit, event.target.value, "total")}
-            placeholder="0"
+        <div className="trade-eq" role="group" aria-label="Quantidade, preço e total">
+          <EqTerm
+            label="Quantidade"
+            value={fields.qty}
+            solved={solved === "qty"}
+            onChange={(value) => editField("qty", value)}
           />
-        </Field>
+          <span className="trade-op" aria-hidden>×</span>
+          <EqTerm
+            label="Preço"
+            code={code}
+            value={fields.unit}
+            solved={solved === "unit"}
+            onChange={(value) => editField("unit", value)}
+          />
+          <span className="trade-op" aria-hidden>=</span>
+          <EqTerm
+            label="Total"
+            code={code}
+            value={fields.total}
+            solved={solved === "total"}
+            onChange={(value) => editField("total", value)}
+          />
+        </div>
         <div className="op-preview">
           <div>
             <span>{type === "buy" ? "Comprando" : "Vendendo"}</span>
@@ -399,6 +400,51 @@ function OperationDrawer({
         </div>
       </form>
     </Drawer>
+  );
+}
+
+type TradeField = "qty" | "unit" | "total";
+
+// Resolve o campo "alvo" a partir dos outros dois (qty × unit = total).
+// Retorna "" quando os dois insumos ainda não estão completos.
+function solveTrade(target: TradeField, f: Record<TradeField, string>): string {
+  const q = Number(f.qty);
+  const u = Number(f.unit);
+  const t = Number(f.total);
+  if (target === "qty") return f.unit !== "" && u > 0 && f.total !== "" ? String(round(t / u)) : "";
+  if (target === "unit") return f.qty !== "" && q > 0 && f.total !== "" ? String(round(t / q)) : "";
+  return f.qty !== "" && f.unit !== "" && q > 0 ? String(round(q * u)) : "";
+}
+
+function EqTerm({
+  label,
+  code,
+  value,
+  solved,
+  onChange
+}: {
+  label: string;
+  code?: string;
+  value: string;
+  solved: boolean;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className={`eq-term ${solved ? "solved" : ""}`}>
+      <span className="eq-label">
+        <span className="eq-name">{label}</span>
+        {solved ? (
+          <span className="eq-auto">
+            <Sparkles size={11} /> auto
+          </span>
+        ) : (
+          code && <span className="eq-unit">{code}</span>
+        )}
+      </span>
+      <div className="eq-input">
+        <NumberInput value={value} min="0" placeholder="0" onChange={(event) => onChange(event.target.value)} />
+      </div>
+    </label>
   );
 }
 
