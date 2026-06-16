@@ -66,6 +66,9 @@ export function createDatabase(path: string) {
           .run({ notes: null, ...operation, id }).changes,
       remove: (id: number) => raw.prepare("DELETE FROM operations WHERE id = ?").run(id).changes
     },
+    // Keyed by symbol: the asset identity across operations/prices/dividends.
+    // Assumes one coin per ticker; re-picking a different coin for an existing
+    // symbol overwrites its slug by design.
     cryptoAssets: {
       list: () =>
         raw
