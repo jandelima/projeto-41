@@ -1,6 +1,7 @@
 import { ArrowDown, ArrowUp, ChevronDown, ChevronUp, Coins, Pencil, Plus, Save, Sparkles, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
+import { DateField } from "../components/datepicker.js";
 import { Drawer, useConfirm } from "../components/dialog.js";
 import {
   AssetIcon,
@@ -404,7 +405,7 @@ function OperationDrawer({
           </datalist>
         </Field>
         <Field label="Data">
-          <input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
+          <DateField value={date} onChange={setDate} />
         </Field>
         {isCrypto && (
           <div className="eq-currency" role="group" aria-label="Moeda da operação">
