@@ -30,6 +30,7 @@ export function PortfolioPage({
   portfolio,
   assets,
   investableTotal,
+  usdBrl = 0,
   onChanged
 }: {
   title: string;
@@ -37,6 +38,7 @@ export function PortfolioPage({
   portfolio: "crypto" | "b3";
   assets: Asset[];
   investableTotal: number;
+  usdBrl?: number;
   onChanged: () => Promise<void>;
 }) {
   const toast = useToast();
@@ -226,6 +228,7 @@ export function PortfolioPage({
           portfolio={portfolio}
           initial={editing}
           assetNames={assetNames}
+          usdBrl={usdBrl}
           onClose={() => { setDrawer(false); setEditing(null); }}
           onSaved={async () => {
             setDrawer(false);
@@ -243,24 +246,30 @@ function OperationDrawer({
   portfolio,
   initial,
   assetNames,
+  usdBrl,
   onClose,
   onSaved
 }: {
   portfolio: "crypto" | "b3";
   initial: Operation | null;
   assetNames: string[];
+  usdBrl: number;
   onClose: () => void;
   onSaved: () => void;
 }) {
   const toast = useToast();
   const isCrypto = portfolio === "crypto";
-  const code = isCrypto ? "USD" : "BRL";
+  // Cripto é sempre armazenado em USD; entryCurrency é só a moeda de digitação.
+  const storedCode = isCrypto ? "USD" : "BRL";
   const initialQty = initial?.quantity ?? 0;
   const initialTotal = initial?.total ?? 0;
 
   const [type, setType] = useState<"buy" | "sell">(initial?.type ?? "buy");
   const [asset, setAsset] = useState(initial?.asset ?? "");
   const [date, setDate] = useState(initial && initial.date !== "1900-01-01" ? initial.date : new Date().toISOString().slice(0, 10));
+  const [entryCurrency, setEntryCurrency] = useState<"USD" | "BRL">("USD");
+  const canUseBrl = isCrypto && usdBrl > 0;
+  const code = isCrypto ? entryCurrency : "BRL";
 
   // Quantidade × Preço = Total. O usuário preenche dois campos quaisquer e o
   // terceiro é resolvido sozinho. `recent` guarda a ordem de edição: o último
@@ -285,13 +294,34 @@ function OperationDrawer({
     setRecent(order);
   }
 
+  // Troca a moeda de digitação convertendo preço e total (a quantidade não muda).
+  function changeCurrency(next: "USD" | "BRL") {
+    if (next === entryCurrency) return;
+    if (next === "BRL" && !canUseBrl) return;
+    const factor = next === "BRL" ? usdBrl : 1 / usdBrl;
+    setFields((f) => ({
+      qty: f.qty,
+      unit: f.unit !== "" ? String(round(Number(f.unit) * factor)) : "",
+      total: f.total !== "" ? String(round(Number(f.total) * factor)) : ""
+    }));
+    setEntryCurrency(next);
+  }
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const quantity = Number(fields.qty);
-    const total = Number(fields.total);
+    let total = Number(fields.total);
     if (!asset.trim() || !(quantity > 0) || !Number.isFinite(total) || total < 0) {
       toast.notify("Preencha o ativo e ao menos dois dos três valores", "error");
       return;
+    }
+    // Operação digitada em BRL é convertida para USD antes de gravar.
+    if (isCrypto && entryCurrency === "BRL") {
+      if (!(usdBrl > 0)) {
+        toast.notify("Cotação USD/BRL indisponível para converter", "error");
+        return;
+      }
+      total = round(total / usdBrl);
     }
     setSaving(true);
     try {
@@ -302,7 +332,7 @@ function OperationDrawer({
         date,
         quantity,
         total,
-        currency: code,
+        currency: storedCode,
         notes: initial?.notes ?? ""
       };
       await api(initial ? `/operations/${initial.id}` : "/operations", {
@@ -364,6 +394,26 @@ function OperationDrawer({
         <Field label="Data">
           <input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
         </Field>
+        {isCrypto && (
+          <div className="eq-currency" role="group" aria-label="Moeda da operação">
+            <button
+              type="button"
+              className={entryCurrency === "USD" ? "active" : ""}
+              onClick={() => changeCurrency("USD")}
+            >
+              USD
+            </button>
+            <button
+              type="button"
+              className={entryCurrency === "BRL" ? "active" : ""}
+              disabled={!canUseBrl}
+              title={canUseBrl ? undefined : "Cotação USD/BRL indisponível"}
+              onClick={() => changeCurrency("BRL")}
+            >
+              BRL
+            </button>
+          </div>
+        )}
         <div className="trade-eq" role="group" aria-label="Quantidade, preço e total">
           <EqTerm
             label="Quantidade"
