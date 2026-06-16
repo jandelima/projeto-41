@@ -30,6 +30,7 @@ import { Ticker } from "../components/ticker.js";
 import type { TickerItem } from "../components/ticker.js";
 import { api } from "../lib/api.js";
 import { relativeTime } from "../lib/format.js";
+import { portfolioIconUrl } from "../lib/icons.js";
 import { usePrivacy } from "../lib/privacy.js";
 import { useTheme } from "../lib/theme.js";
 import { useToast } from "../lib/toast.js";
@@ -146,14 +147,19 @@ export function App() {
 
   const tickerItems = useMemo<TickerItem[]>(() => {
     if (!dashboard) return [];
-    return [...dashboard.portfolios.crypto, ...dashboard.portfolios.b3]
-      .filter((asset) => asset.quantity > 1e-9 && asset.price > 0)
-      .sort((a, b) => b.marketValueBrl - a.marketValueBrl)
-      .map((asset) => ({
+    const tagged = [
+      ...dashboard.portfolios.crypto.map((asset) => ({ asset, portfolio: "crypto" as const })),
+      ...dashboard.portfolios.b3.map((asset) => ({ asset, portfolio: "b3" as const }))
+    ];
+    return tagged
+      .filter(({ asset }) => asset.quantity > 1e-9 && asset.price > 0)
+      .sort((a, b) => b.asset.marketValueBrl - a.asset.marketValueBrl)
+      .map(({ asset, portfolio }) => ({
         symbol: asset.asset,
         price: asset.price,
         currency: asset.priceCurrency,
-        change: asset.dayChange
+        change: asset.dayChange,
+        icon: portfolioIconUrl(portfolio, asset.asset)
       }));
   }, [dashboard]);
 

@@ -1,4 +1,5 @@
 import { ArrowDown, ArrowUp } from "lucide-react";
+import { useState } from "react";
 import { currencyRaw, signedPercent } from "../lib/format.js";
 
 export type TickerItem = {
@@ -6,6 +7,7 @@ export type TickerItem = {
   price: number;
   currency: string;
   change: number | null;
+  icon?: string;
 };
 
 export function Ticker({ items }: { items: TickerItem[] }) {
@@ -13,7 +15,7 @@ export function Ticker({ items }: { items: TickerItem[] }) {
   // A sequência é duplicada para o loop ser contínuo: a faixa desliza -50% e reinicia
   // exatamente sobre a cópia, sem "salto".
   const loop = [...items, ...items];
-  const duration = Math.max(24, Math.round(items.length * 3.4));
+  const duration = Math.max(40, Math.round(items.length * 6.5));
 
   return (
     <div className="ticker" aria-hidden="true">
@@ -23,6 +25,7 @@ export function Ticker({ items }: { items: TickerItem[] }) {
           const Arrow = dir === "down" ? ArrowDown : ArrowUp;
           return (
             <span className="ticker-item" key={`${item.symbol}-${index}`}>
+              <TickerIcon src={item.icon} label={item.symbol} />
               <span className="ticker-symbol">{item.symbol}</span>
               <span className="ticker-price">{currencyRaw(item.price, item.currency)}</span>
               <span className={`ticker-change ${dir}`}>
@@ -40,5 +43,21 @@ export function Ticker({ items }: { items: TickerItem[] }) {
         })}
       </div>
     </div>
+  );
+}
+
+function TickerIcon({ src, label }: { src?: string; label: string }) {
+  const [failed, setFailed] = useState(false);
+  if (!src || failed) {
+    return <span className="ticker-icon ticker-icon-fallback">{label.slice(0, 2)}</span>;
+  }
+  return (
+    <img
+      className="ticker-icon"
+      src={src}
+      alt=""
+      loading="lazy"
+      onError={() => setFailed(true)}
+    />
   );
 }
