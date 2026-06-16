@@ -1519,6 +1519,48 @@ main {
 .eq-input input:focus {
   box-shadow: none;
 }
+/* Esconde o spinner nativo (rudimentar) em favor do stepper custom. */
+.eq-input input::-webkit-outer-spin-button,
+.eq-input input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.eq-input input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.eq-step {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  width: 22px;
+  align-self: stretch;
+  border-left: 1px solid var(--border);
+}
+.eq-step button {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+  transition: var(--transition);
+}
+.eq-step button:first-child {
+  border-bottom: 1px solid var(--border);
+}
+.eq-step button:hover {
+  background: var(--surface-3);
+  color: var(--text);
+}
+.eq-term.solved .eq-step {
+  border-left-color: color-mix(in srgb, var(--accent) 30%, var(--border));
+}
+.eq-term.solved .eq-step button:first-child {
+  border-bottom-color: color-mix(in srgb, var(--accent) 30%, var(--border));
+}
 .eq-input:focus-within {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);

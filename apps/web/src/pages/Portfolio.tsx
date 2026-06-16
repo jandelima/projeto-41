@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, Coins, Pencil, Plus, Save, Sparkles, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronDown, ChevronUp, Coins, Pencil, Plus, Save, Sparkles, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { Drawer, useConfirm } from "../components/dialog.js";
@@ -431,6 +431,7 @@ function OperationDrawer({
             label="Quantidade"
             value={fields.qty}
             solved={solved === "qty"}
+            step={isCrypto ? "0.001" : "1"}
             onChange={(value) => editField("qty", value)}
           />
           <span className="trade-op" aria-hidden>×</span>
@@ -439,6 +440,7 @@ function OperationDrawer({
             code={code}
             value={fields.unit}
             solved={solved === "unit"}
+            step="0.01"
             onChange={(value) => editField("unit", value)}
           />
           <span className="trade-op" aria-hidden>=</span>
@@ -447,6 +449,7 @@ function OperationDrawer({
             code={code}
             value={fields.total}
             solved={solved === "total"}
+            step="0.01"
             onChange={(value) => editField("total", value)}
           />
         </div>
@@ -495,14 +498,21 @@ function EqTerm({
   code,
   value,
   solved,
+  step = "any",
   onChange
 }: {
   label: string;
   code?: string;
   value: string;
   solved: boolean;
+  step?: string;
   onChange: (value: string) => void;
 }) {
+  function bump(direction: 1 | -1) {
+    const delta = Number(step) || 0;
+    const next = Math.max(0, round((Number(value) || 0) + direction * delta));
+    onChange(String(next));
+  }
   return (
     <label className={`eq-term ${solved ? "solved" : ""}`}>
       <span className="eq-label">
@@ -516,7 +526,21 @@ function EqTerm({
         )}
       </span>
       <div className="eq-input">
-        <NumberInput value={value} min="0" placeholder="0" onChange={(event) => onChange(event.target.value)} />
+        <NumberInput
+          value={value}
+          min="0"
+          step={step}
+          placeholder="0"
+          onChange={(event) => onChange(event.target.value)}
+        />
+        <span className="eq-step">
+          <button type="button" tabIndex={-1} aria-label="Aumentar" onClick={() => bump(1)}>
+            <ChevronUp size={12} />
+          </button>
+          <button type="button" tabIndex={-1} aria-label="Diminuir" onClick={() => bump(-1)}>
+            <ChevronDown size={12} />
+          </button>
+        </span>
       </div>
     </label>
   );
