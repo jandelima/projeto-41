@@ -1562,6 +1562,52 @@ main {
   cursor: not-allowed;
 }
 
+/* Checkbox da taxa Binance. */
+.fee-toggle {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  cursor: pointer;
+  transition: var(--transition);
+}
+.fee-toggle:hover {
+  border-color: var(--border-strong);
+}
+.fee-toggle:has(input:checked) {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border-strong));
+  background: var(--accent-soft);
+}
+.fee-toggle input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.fee-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.fee-text strong {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+.fee-text small {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.op-fee {
+  display: block;
+  margin-top: 3px;
+  font-size: 11px;
+  color: var(--warning);
+}
+
 /* ---------- Dialogs ---------- */
 .overlay {
   position: fixed;

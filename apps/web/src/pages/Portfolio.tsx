@@ -268,6 +268,7 @@ function OperationDrawer({
   const [asset, setAsset] = useState(initial?.asset ?? "");
   const [date, setDate] = useState(initial && initial.date !== "1900-01-01" ? initial.date : new Date().toISOString().slice(0, 10));
   const [entryCurrency, setEntryCurrency] = useState<"USD" | "BRL">("USD");
+  const [useFee, setUseFee] = useState(false);
   const canUseBrl = isCrypto && usdBrl > 0;
   const code = isCrypto ? entryCurrency : "BRL";
 
@@ -309,7 +310,7 @@ function OperationDrawer({
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const quantity = Number(fields.qty);
+    let quantity = Number(fields.qty);
     let total = Number(fields.total);
     if (!asset.trim() || !(quantity > 0) || !Number.isFinite(total) || total < 0) {
       toast.notify("Preencha o ativo e ao menos dois dos três valores", "error");
@@ -322,6 +323,12 @@ function OperationDrawer({
         return;
       }
       total = round(total / usdBrl);
+    }
+    // Taxa Binance (0,1%): na compra reduz a quantidade recebida; na venda
+    // reduz o valor recebido. O que foi pago/vendido permanece igual.
+    if (isCrypto && useFee) {
+      if (type === "buy") quantity = round(quantity * (1 - BINANCE_FEE));
+      else total = round(total * (1 - BINANCE_FEE));
     }
     setSaving(true);
     try {
@@ -347,8 +354,13 @@ function OperationDrawer({
     }
   }
 
-  const previewQty = Number(fields.qty) || 0;
-  const previewTotal = Number(fields.total) || 0;
+  const feeOn = isCrypto && useFee;
+  const grossQty = Number(fields.qty) || 0;
+  const grossTotal = Number(fields.total) || 0;
+  const netQty = feeOn && type === "buy" ? round(grossQty * (1 - BINANCE_FEE)) : grossQty;
+  const netTotal = feeOn && type === "sell" ? round(grossTotal * (1 - BINANCE_FEE)) : grossTotal;
+  const feeQty = grossQty - netQty;
+  const feeTotal = grossTotal - netTotal;
 
   return (
     <Drawer
@@ -438,14 +450,29 @@ function OperationDrawer({
             onChange={(value) => editField("total", value)}
           />
         </div>
+        {isCrypto && (
+          <label className="fee-toggle">
+            <input type="checkbox" checked={useFee} onChange={(event) => setUseFee(event.target.checked)} />
+            <span className="fee-text">
+              <strong>Descontar taxa Binance</strong>
+              <small>0,1% sobre o valor da ordem</small>
+            </span>
+          </label>
+        )}
         <div className="op-preview">
           <div>
-            <span>{type === "buy" ? "Comprando" : "Vendendo"}</span>
-            <strong>{decimal(previewQty, 8)} {asset || "—"}</strong>
+            <span>{type === "buy" ? "Você recebe" : "Você vende"}</span>
+            <strong>{decimal(netQty, 8)} {asset || "—"}</strong>
+            {feeOn && type === "buy" && feeQty > 0 && (
+              <small className="op-fee">taxa −{decimal(feeQty, 8)} {asset || ""}</small>
+            )}
           </div>
           <div className="right">
-            <span>Total</span>
-            <strong>{fmtCurrency(previewTotal, code)}</strong>
+            <span>{type === "buy" ? "Você paga" : "Você recebe"}</span>
+            <strong>{fmtCurrency(netTotal, code)}</strong>
+            {feeOn && type === "sell" && feeTotal > 0 && (
+              <small className="op-fee">taxa −{fmtCurrency(feeTotal, code)}</small>
+            )}
           </div>
         </div>
       </form>
@@ -561,3 +588,6 @@ function InlineMoney({ value, onSave }: { value: number; onSave: (value: number)
 function round(value: number) {
   return Math.round(value * 1e8) / 1e8;
 }
+
+// Taxa padrão de spot da Binance (0,1%).
+const BINANCE_FEE = 0.001;
