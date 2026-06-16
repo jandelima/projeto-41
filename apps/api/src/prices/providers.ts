@@ -36,6 +36,44 @@ export async function fetchCryptoPrices(
   });
 }
 
+export type CryptoSearchResult = {
+  id: string;
+  symbol: string;
+  name: string;
+  rank: number | null;
+};
+
+export async function searchCryptoAssets(
+  query: string,
+  apiKey: string,
+  fetcher: Fetcher = fetch
+): Promise<CryptoSearchResult[]> {
+  const term = query.trim();
+  if (!term) return [];
+
+  const endpoint = new URL("https://api.coingecko.com/api/v3/search");
+  endpoint.searchParams.set("query", term);
+
+  const headers = apiKey ? { "x-cg-demo-api-key": apiKey } : undefined;
+  const response = await withTimeout(fetcher, endpoint, headers);
+  if (!response.ok) throw new Error(`CoinGecko search returned ${response.status}`);
+  const data = (await response.json()) as {
+    coins?: { id?: string; symbol?: string; name?: string; market_cap_rank?: number | null }[];
+  };
+
+  return (data.coins ?? [])
+    .filter((coin): coin is { id: string; symbol: string; name: string; market_cap_rank?: number | null } =>
+      Boolean(coin.id && coin.symbol && coin.name)
+    )
+    .slice(0, 1000)
+    .map((coin) => ({
+      id: coin.id,
+      symbol: coin.symbol.toUpperCase(),
+      name: coin.name,
+      rank: coin.market_cap_rank ?? null
+    }));
+}
+
 export async function fetchB3Price(
   symbol: string,
   token: string,

@@ -1,6 +1,7 @@
 import { ArrowDown, ArrowUp, Coins, Pencil, Plus, Save, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
+import { CryptoAssetSearch } from "../components/CryptoAssetSearch.js";
 import { Drawer, useConfirm } from "../components/dialog.js";
 import {
   AssetIcon,
@@ -20,7 +21,7 @@ import { api } from "../lib/api.js";
 import { currency as fmtCurrency, currencyRaw, decimal, longDate, money, percent } from "../lib/format.js";
 import { portfolioIconUrl } from "../lib/icons.js";
 import { useToast } from "../lib/toast.js";
-import type { Asset, Operation } from "../lib/types.js";
+import type { Asset, CryptoSearchResult, Operation } from "../lib/types.js";
 
 type SortKey = "asset" | "quantity" | "averagePrice" | "price" | "marketValueBrl" | "totalReturn";
 
@@ -260,6 +261,8 @@ function OperationDrawer({
 
   const [type, setType] = useState<"buy" | "sell">(initial?.type ?? "buy");
   const [asset, setAsset] = useState(initial?.asset ?? "");
+  const [slug, setSlug] = useState("");
+  const [assetName, setAssetName] = useState(initial?.asset ?? "");
   const [date, setDate] = useState(initial && initial.date !== "1900-01-01" ? initial.date : new Date().toISOString().slice(0, 10));
   const [quantity, setQuantity] = useState(initialQty ? String(initialQty) : "");
   const [unit, setUnit] = useState(initialQty > 0 ? String(initialTotal / initialQty) : "");
@@ -286,8 +289,12 @@ function OperationDrawer({
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!asset.trim() || Number(quantity) <= 0 || Number(total) < 0) {
-      toast.notify("Preencha ativo, quantidade e valor", "error");
+    if (!asset.trim()) {
+      toast.notify(isCrypto ? "Selecione um ativo na busca" : "Preencha o ativo", "error");
+      return;
+    }
+    if (Number(quantity) <= 0 || Number(total) < 0) {
+      toast.notify("Preencha quantidade e valor", "error");
       return;
     }
     setSaving(true);
@@ -300,7 +307,8 @@ function OperationDrawer({
         quantity: Number(quantity),
         total: Number(total),
         currency: code,
-        notes: initial?.notes ?? ""
+        notes: initial?.notes ?? "",
+        ...(isCrypto && slug ? { slug, name: assetName } : {})
       };
       await api(initial ? `/operations/${initial.id}` : "/operations", {
         method: initial ? "PUT" : "POST",
@@ -344,19 +352,38 @@ function OperationDrawer({
             ]}
           />
         </Field>
-        <Field label="Ativo">
-          <input
-            list="asset-options"
-            value={asset}
-            onChange={(event) => setAsset(event.target.value.toUpperCase())}
-            placeholder={isCrypto ? "BTC" : "PETR4"}
-            autoFocus
-          />
-          <datalist id="asset-options">
-            {assetNames.map((name) => (
-              <option key={name} value={name} />
-            ))}
-          </datalist>
+        <Field label="Ativo" hint={isCrypto ? "Busca na CoinGecko por símbolo ou nome." : undefined}>
+          {isCrypto ? (
+            <CryptoAssetSearch
+              selected={asset ? { symbol: asset, name: assetName || asset } : null}
+              onSelect={(result: CryptoSearchResult) => {
+                setAsset(result.symbol);
+                setSlug(result.id);
+                setAssetName(result.name);
+              }}
+              onClear={() => {
+                setAsset("");
+                setSlug("");
+                setAssetName("");
+              }}
+              autoFocus
+            />
+          ) : (
+            <>
+              <input
+                list="asset-options"
+                value={asset}
+                onChange={(event) => setAsset(event.target.value.toUpperCase())}
+                placeholder="PETR4"
+                autoFocus
+              />
+              <datalist id="asset-options">
+                {assetNames.map((name) => (
+                  <option key={name} value={name} />
+                ))}
+              </datalist>
+            </>
+          )}
         </Field>
         <Field label="Data">
           <input type="date" value={date} onChange={(event) => setDate(event.target.value)} />

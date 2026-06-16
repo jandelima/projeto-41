@@ -92,6 +92,58 @@ describe("API", () => {
     await app.close();
   });
 
+  it("searches crypto assets through the price service", async () => {
+    db = createDatabase(":memory:");
+    const app = buildApp({
+      db,
+      priceService: {
+        runAll: async () => [],
+        searchCrypto: async (query: string) => [
+          { id: "bitcoin", symbol: "BTC", name: `Bitcoin (${query})`, rank: 1 }
+        ]
+      }
+    });
+
+    const response = await app.inject({ method: "GET", url: "/api/crypto/search?q=btc" });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual([
+      { id: "bitcoin", symbol: "BTC", name: "Bitcoin (btc)", rank: 1 }
+    ]);
+    await app.close();
+  });
+
+  it("remembers the CoinGecko slug picked for a new crypto operation", async () => {
+    db = createDatabase(":memory:");
+    const app = buildApp({
+      db,
+      priceService: { runAll: async () => [], ensureCryptoPrice: async () => true }
+    });
+
+    await app.inject({
+      method: "POST",
+      url: "/api/operations",
+      payload: {
+        portfolio: "crypto",
+        type: "buy",
+        asset: "avax",
+        slug: "avalanche-2",
+        name: "Avalanche",
+        date: "2026-06-09",
+        quantity: 2,
+        total: 80,
+        currency: "USD"
+      }
+    });
+
+    expect(db.cryptoAssets.get("AVAX")).toEqual({
+      symbol: "AVAX",
+      slug: "avalanche-2",
+      name: "Avalanche"
+    });
+    await app.close();
+  });
+
   it("does not auto-fetch crypto prices for a new B3 asset", async () => {
     db = createDatabase(":memory:");
     let calls = 0;

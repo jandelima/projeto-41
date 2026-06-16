@@ -47,6 +47,20 @@ describe("database", () => {
     expect(db.targets.list()).toEqual([{ category: "custom", weight: 1 }]);
   });
 
+  it("remembers the CoinGecko slug for a crypto symbol", () => {
+    db = createDatabase(":memory:");
+    db.cryptoAssets.upsert({ symbol: "AVAX", slug: "avalanche-2", name: "Avalanche" });
+
+    expect(db.cryptoAssets.get("AVAX")).toEqual({
+      symbol: "AVAX",
+      slug: "avalanche-2",
+      name: "Avalanche"
+    });
+
+    db.cryptoAssets.upsert({ symbol: "AVAX", slug: "avalanche", name: "Avalanche Renamed" });
+    expect(db.cryptoAssets.get("AVAX")?.slug).toBe("avalanche");
+  });
+
   it("stores operations and enforces one snapshot per date", () => {
     db = createDatabase(":memory:");
     db.operations.create({

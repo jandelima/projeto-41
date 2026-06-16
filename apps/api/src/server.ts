@@ -22,7 +22,8 @@ const priceService = config.demoMode
   ? {
       runAll: async () => [
         { provider: "demo", updated: db.prices.list().length, errors: [] as string[] }
-      ]
+      ],
+      searchCrypto: async () => []
     }
   : livePriceService;
 const app = buildApp({

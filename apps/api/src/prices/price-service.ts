@@ -1,5 +1,10 @@
 import type { AppDatabase } from "@projeto41/db";
-import { fetchB3Price, fetchCryptoPrices, fetchUsdBrl } from "./providers.js";
+import {
+  fetchB3Price,
+  fetchCryptoPrices,
+  fetchUsdBrl,
+  searchCryptoAssets
+} from "./providers.js";
 
 const cryptoSlugs: Record<string, string> = {
   BTC: "bitcoin",
@@ -39,6 +44,10 @@ export function createPriceService(
 ) {
   const fetcher = options.fetcher ?? fetch;
 
+  function slugFor(symbol: string) {
+    return db.cryptoAssets.get(symbol)?.slug ?? cryptoSlugs[symbol] ?? symbol.toLowerCase();
+  }
+
   async function runCrypto() {
     const symbols = [
       ...new Set(db.operations.list("crypto").map((operation) => operation.asset))
@@ -48,7 +57,7 @@ export function createPriceService(
     }
     try {
       const quotes = await fetchCryptoPrices(
-        symbols.map((symbol) => ({ symbol, slug: cryptoSlugs[symbol] ?? symbol.toLowerCase() })),
+        symbols.map((symbol) => ({ symbol, slug: slugFor(symbol) })),
         options.coingeckoApiKey,
         fetcher
       );
@@ -66,7 +75,7 @@ export function createPriceService(
     if (existing && existing.price > 0) return false;
     try {
       const [quote] = await fetchCryptoPrices(
-        [{ symbol, slug: cryptoSlugs[symbol] ?? symbol.toLowerCase() }],
+        [{ symbol, slug: slugFor(symbol) }],
         options.coingeckoApiKey,
         fetcher
       );
@@ -107,11 +116,16 @@ export function createPriceService(
     }
   }
 
+  async function searchCrypto(query: string) {
+    return searchCryptoAssets(query, options.coingeckoApiKey, fetcher);
+  }
+
   return {
     runCrypto,
     runB3,
     runCurrency,
     ensureCryptoPrice,
+    searchCrypto,
     runAll: () => Promise.all([runCrypto(), runB3(), runCurrency()])
   };
 }

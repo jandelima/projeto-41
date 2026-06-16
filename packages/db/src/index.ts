@@ -18,6 +18,12 @@ export type PriceRecord = {
   error: string | null;
 };
 
+export type CryptoAsset = {
+  symbol: string;
+  slug: string;
+  name: string;
+};
+
 export type AppDatabase = ReturnType<typeof createDatabase>;
 
 export function createDatabase(path: string) {
@@ -59,6 +65,23 @@ export function createDatabase(path: string) {
           )
           .run({ notes: null, ...operation, id }).changes,
       remove: (id: number) => raw.prepare("DELETE FROM operations WHERE id = ?").run(id).changes
+    },
+    cryptoAssets: {
+      list: () =>
+        raw
+          .prepare("SELECT symbol, slug, name FROM crypto_assets ORDER BY symbol")
+          .all() as CryptoAsset[],
+      get: (symbol: string) =>
+        raw
+          .prepare("SELECT symbol, slug, name FROM crypto_assets WHERE symbol = ?")
+          .get(symbol) as CryptoAsset | undefined,
+      upsert: (asset: CryptoAsset) =>
+        raw
+          .prepare(
+            `INSERT INTO crypto_assets(symbol, slug, name) VALUES (@symbol, @slug, @name)
+             ON CONFLICT(symbol) DO UPDATE SET slug=excluded.slug, name=excluded.name`
+          )
+          .run(asset)
     },
     positions: {
       list: () =>
@@ -241,6 +264,11 @@ function migrate(db: Database.Database) {
       total REAL NOT NULL CHECK(total >= 0),
       currency TEXT NOT NULL CHECK(currency IN ('BRL','USD')),
       notes TEXT
+    );
+    CREATE TABLE IF NOT EXISTS crypto_assets (
+      symbol TEXT PRIMARY KEY,
+      slug TEXT NOT NULL,
+      name TEXT NOT NULL
     );
     CREATE TABLE IF NOT EXISTS manual_positions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,

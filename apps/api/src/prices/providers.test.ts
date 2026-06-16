@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { fetchB3Price, fetchCryptoPrices, fetchUsdBrl } from "./providers.js";
+import {
+  fetchB3Price,
+  fetchCryptoPrices,
+  fetchUsdBrl,
+  searchCryptoAssets
+} from "./providers.js";
 
 describe("price providers", () => {
   it("parses the CoinGecko simple/price response", async () => {
@@ -39,6 +44,35 @@ describe("price providers", () => {
 
     expect(attempts).toBe(2);
     expect(price).toMatchObject({ symbol: "BBAS3", price: 25.4 });
+  });
+
+  it("maps the CoinGecko search response to symbol/id matches", async () => {
+    const fetcher = async (input: string | URL) => {
+      expect(String(input)).toContain("query=btc");
+      return Response.json({
+        coins: [
+          { id: "bitcoin", symbol: "btc", name: "Bitcoin", market_cap_rank: 1 },
+          { id: "wrapped-bitcoin", symbol: "wbtc", name: "Wrapped Bitcoin", market_cap_rank: 15 },
+          { id: "", symbol: "", name: "" }
+        ]
+      });
+    };
+    const results = await searchCryptoAssets("btc", "demo-key", fetcher as typeof fetch);
+    expect(results).toEqual([
+      { id: "bitcoin", symbol: "BTC", name: "Bitcoin", rank: 1 },
+      { id: "wrapped-bitcoin", symbol: "WBTC", name: "Wrapped Bitcoin", rank: 15 }
+    ]);
+  });
+
+  it("returns no search matches for an empty query without calling the API", async () => {
+    let called = false;
+    const fetcher = async () => {
+      called = true;
+      return Response.json({});
+    };
+    const results = await searchCryptoAssets("   ", "demo-key", fetcher as typeof fetch);
+    expect(results).toEqual([]);
+    expect(called).toBe(false);
   });
 
   it("parses the official BCB PTAX response", async () => {
