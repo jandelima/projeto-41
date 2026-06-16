@@ -5,12 +5,12 @@ import { AnimatedNumber, Card, Delta, Kpi, Panel } from "../components/ui.js";
 import { fx, money, percent, signedPercent, usd } from "../lib/format.js";
 import type { Dashboard, Snapshot } from "../lib/types.js";
 
-function changeSince(history: Snapshot[], days: number) {
+// Variação do saldo atual (ao vivo) em relação ao snapshot mais próximo de `days` atrás.
+function changeSince(history: Snapshot[], current: number, days: number) {
   if (!history.length) return 0;
-  const last = history[history.length - 1]!.totalBrl;
   const cutoff = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
   const past = [...history].reverse().find((item) => item.date <= cutoff) ?? history[0]!;
-  return past.totalBrl > 0 ? last / past.totalBrl - 1 : 0;
+  return past.totalBrl > 0 ? current / past.totalBrl - 1 : 0;
 }
 
 const ranges = [
@@ -59,12 +59,13 @@ export function DashboardPage({ data }: { data: Dashboard }) {
       .sort((a, b) => b.value - a.value);
   }, [data]);
 
-  const last = data.history.at(-1);
-  const previous = data.history.at(-2);
-  const dayChange = last && previous && previous.totalBrl > 0 ? last.totalBrl / previous.totalBrl - 1 : 0;
-  const monthChange = changeSince(data.history, 30);
-  const yearChange = changeSince(data.history, 365);
-  const peak = data.history.reduce((max, item) => Math.max(max, item.totalBrl), 0);
+  // "Hoje" = saldo atual vs. o último fechamento registrado em um dia anterior a hoje.
+  const today = new Date().toISOString().slice(0, 10);
+  const yesterday = [...data.history].reverse().find((item) => item.date < today);
+  const dayChange = yesterday && yesterday.totalBrl > 0 ? data.totalBrl / yesterday.totalBrl - 1 : 0;
+  const monthChange = changeSince(data.history, data.totalBrl, 30);
+  const yearChange = changeSince(data.history, data.totalBrl, 365);
+  const peak = data.history.reduce((max, item) => Math.max(max, item.totalBrl), data.totalBrl);
 
   return (
     <div className="dashboard stagger">
