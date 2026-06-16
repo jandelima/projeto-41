@@ -16,7 +16,7 @@ import {
   Wallet,
   X
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ComponentType } from "react";
 import { AllocationPage } from "../pages/Allocation.js";
 import { ContributionsPage } from "../pages/Contributions.js";
@@ -26,6 +26,8 @@ import { PlanningPage } from "../pages/Planning.js";
 import { PortfolioPage } from "../pages/Portfolio.js";
 import { PositionsPage } from "../pages/Positions.js";
 import { Loading } from "../components/ui.js";
+import { Ticker } from "../components/ticker.js";
+import type { TickerItem } from "../components/ticker.js";
 import { api } from "../lib/api.js";
 import { relativeTime } from "../lib/format.js";
 import { usePrivacy } from "../lib/privacy.js";
@@ -142,6 +144,19 @@ export function App() {
 
   const current = allItems.find((item) => item.id === page)!;
 
+  const tickerItems = useMemo<TickerItem[]>(() => {
+    if (!dashboard) return [];
+    return [...dashboard.portfolios.crypto, ...dashboard.portfolios.b3]
+      .filter((asset) => asset.quantity > 1e-9 && asset.price > 0)
+      .sort((a, b) => b.marketValueBrl - a.marketValueBrl)
+      .map((asset) => ({
+        symbol: asset.asset,
+        price: asset.price,
+        currency: asset.priceCurrency,
+        change: asset.dayChange
+      }));
+  }, [dashboard]);
+
   return (
     <div className="app-shell">
       <aside className={`sidebar ${mobileOpen ? "sidebar-open" : ""}`}>
@@ -201,6 +216,7 @@ export function App() {
       {mobileOpen && <div className="scrim" onClick={() => setMobileOpen(false)} />}
 
       <main>
+        <Ticker items={tickerItems} />
         <header className="topbar">
           <button className="menu-button" onClick={() => setMobileOpen(true)} aria-label="Abrir menu">
             <Menu />

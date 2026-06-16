@@ -16,6 +16,13 @@ export type PriceRecord = {
   marketTime: string | null;
   fetchedAt: string;
   error: string | null;
+  // Variação do dia informada pelo provedor (ex.: brapi), como razão (0.012 = 1,2%).
+  changePercent?: number | null;
+  // Baseline diário: último preço do dia anterior e o dia (YYYY-MM-DD) a que ele se refere.
+  // Gerenciado automaticamente pelo upsert para calcular a variação do dia quando o
+  // provedor não a fornece (cripto). Não deve ser preenchido pelos provedores.
+  prevPrice?: number | null;
+  prevDay?: string | null;
 };
 
 export type AppDatabase = ReturnType<typeof createDatabase>;
@@ -131,26 +138,47 @@ export function createDatabase(path: string) {
         raw
           .prepare(
             `SELECT symbol, currency, price, provider, market_time AS marketTime,
-             fetched_at AS fetchedAt, error FROM prices ORDER BY symbol`
+             fetched_at AS fetchedAt, error, change_percent AS changePercent,
+             prev_price AS prevPrice, prev_day AS prevDay FROM prices ORDER BY symbol`
           )
           .all() as PriceRecord[],
       get: (symbol: string) =>
         raw
           .prepare(
             `SELECT symbol, currency, price, provider, market_time AS marketTime,
-             fetched_at AS fetchedAt, error FROM prices WHERE symbol=?`
+             fetched_at AS fetchedAt, error, change_percent AS changePercent,
+             prev_price AS prevPrice, prev_day AS prevDay FROM prices WHERE symbol=?`
           )
           .get(symbol) as PriceRecord | undefined,
       upsert: (price: PriceRecord) =>
         raw
           .prepare(
-            `INSERT INTO prices(symbol, currency, price, provider, market_time, fetched_at, error)
-             VALUES (@symbol,@currency,@price,@provider,@marketTime,@fetchedAt,@error)
+            // prev_price/prev_day = "fechamento" do dia anterior: quando chega um preço de
+            // um dia mais novo que o último gravado, o preço antigo vira a referência do dia.
+            `INSERT INTO prices(symbol, currency, price, provider, market_time, fetched_at, error,
+               change_percent, prev_price, prev_day)
+             VALUES (@symbol,@currency,@price,@provider,@marketTime,@fetchedAt,@error,
+               @changePercent,@price,@day)
              ON CONFLICT(symbol) DO UPDATE SET currency=excluded.currency, price=excluded.price,
              provider=excluded.provider, market_time=excluded.market_time,
-             fetched_at=excluded.fetched_at, error=excluded.error`
+             fetched_at=excluded.fetched_at, error=excluded.error,
+             change_percent=excluded.change_percent,
+             prev_price = CASE WHEN substr(prices.fetched_at, 1, 10) < @day
+               THEN prices.price ELSE prices.prev_price END,
+             prev_day = CASE WHEN substr(prices.fetched_at, 1, 10) < @day
+               THEN substr(prices.fetched_at, 1, 10) ELSE prices.prev_day END`
           )
-          .run(price),
+          .run({
+            symbol: price.symbol,
+            currency: price.currency,
+            price: price.price,
+            provider: price.provider,
+            marketTime: price.marketTime,
+            fetchedAt: price.fetchedAt,
+            error: price.error,
+            changePercent: price.changePercent ?? null,
+            day: price.fetchedAt.slice(0, 10)
+          }),
       markError: (symbol: string, error: string, fetchedAt: string) =>
         raw
           .prepare("UPDATE prices SET error=?, fetched_at=? WHERE symbol=?")
@@ -268,7 +296,10 @@ function migrate(db: Database.Database) {
       provider TEXT NOT NULL,
       market_time TEXT,
       fetched_at TEXT NOT NULL,
-      error TEXT
+      error TEXT,
+      change_percent REAL,
+      prev_price REAL,
+      prev_day TEXT
     );
     CREATE TABLE IF NOT EXISTS allocation_targets (
       category TEXT PRIMARY KEY,
@@ -291,6 +322,11 @@ function migrate(db: Database.Database) {
     );
   `);
 
+  // Colunas adicionadas após o release inicial: garantem upgrade de bancos existentes.
+  ensureColumn(db, "prices", "change_percent", "REAL");
+  ensureColumn(db, "prices", "prev_price", "REAL");
+  ensureColumn(db, "prices", "prev_day", "TEXT");
+
   const targetCount = db
     .prepare("SELECT COUNT(*) AS count FROM allocation_targets")
     .get() as { count: number };
@@ -305,5 +341,12 @@ function migrate(db: Database.Database) {
         ('renda_fixa', 0.15),
         ('acoes_globais', 0.10);
     `);
+  }
+}
+
+function ensureColumn(db: Database.Database, table: string, column: string, type: string) {
+  const columns = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+  if (!columns.some((entry) => entry.name === column)) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
   }
 }

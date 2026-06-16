@@ -40,7 +40,12 @@ export async function fetchB3Price(
   const response = await withRetry(fetcher, endpoint);
   if (!response.ok) throw new Error(`brapi returned ${response.status} for ${symbol}`);
   const data = (await response.json()) as {
-    results?: { symbol?: string; regularMarketPrice?: number; regularMarketTime?: string }[];
+    results?: {
+      symbol?: string;
+      regularMarketPrice?: number;
+      regularMarketTime?: string;
+      regularMarketChangePercent?: number;
+    }[];
   };
   const quote = data.results?.[0];
   if (!quote?.regularMarketPrice || quote.regularMarketPrice <= 0) {
@@ -53,7 +58,12 @@ export async function fetchB3Price(
     provider: "brapi",
     marketTime: quote.regularMarketTime ?? null,
     fetchedAt: new Date().toISOString(),
-    error: null
+    error: null,
+    // brapi devolve o percentual já em pontos (1,5 = 1,5%); guardamos como razão.
+    changePercent:
+      typeof quote.regularMarketChangePercent === "number"
+        ? quote.regularMarketChangePercent / 100
+        : null
   };
 }
 
