@@ -20,7 +20,7 @@ describe("loadServerConfig", () => {
       join(temporaryDirectory, ".env"),
       [
         "BRAPI_TOKEN=root-token",
-        "CRYPTO_PRICE_URL=https://prices.example.test",
+        "COINGECKO_API_KEY=demo-key",
         "PORT=4100",
         "TZ=America/Sao_Paulo"
       ].join("\n")
@@ -28,7 +28,7 @@ describe("loadServerConfig", () => {
 
     expect(loadServerConfig(temporaryDirectory, {})).toMatchObject({
       brapiToken: "root-token",
-      cryptoUrl: "https://prices.example.test",
+      coingeckoApiKey: "demo-key",
       port: 4100,
       timezone: "America/Sao_Paulo"
     });

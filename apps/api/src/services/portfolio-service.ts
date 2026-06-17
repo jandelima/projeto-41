@@ -1,4 +1,4 @@
-import type { AppDatabase } from "@projeto41/db";
+import type { AppDatabase, PriceRecord } from "@projeto41/db";
 import { calculatePosition } from "@projeto41/finance";
 
 export function buildPortfolios(db: AppDatabase) {
@@ -29,7 +29,8 @@ export function buildPortfolios(db: AppDatabase) {
           price: price?.price ?? 0,
           priceCurrency: portfolio === "crypto" ? "USD" : "BRL",
           priceStatus: priceStatus(price?.fetchedAt, price?.error),
-          priceFetchedAt: price?.fetchedAt ?? null
+          priceFetchedAt: price?.fetchedAt ?? null,
+          dayChange: dayChange(price)
         };
       })
     };
@@ -106,6 +107,18 @@ export function createDailySnapshot(db: AppDatabase, date: string) {
     priceTimes
   });
   return dashboard.totalBrl;
+}
+
+// Variação do dia por ativo, como razão (0.012 = +1,2%) ou null quando indisponível.
+// Calculada sempre aqui: preço atual vs. o "fechamento" do dia anterior gravado no
+// baseline (prevPrice/prevDay). Não usamos percentual de provedor externo.
+function dayChange(price?: PriceRecord): number | null {
+  if (!price || price.error) return null;
+  const today = price.fetchedAt.slice(0, 10);
+  if (price.prevPrice && price.prevPrice > 0 && price.prevDay && price.prevDay < today) {
+    return price.price / price.prevPrice - 1;
+  }
+  return null;
 }
 
 function priceStatus(fetchedAt?: string, error?: string | null) {

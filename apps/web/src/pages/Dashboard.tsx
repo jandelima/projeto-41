@@ -1,16 +1,16 @@
 import { ArrowDownRight, ArrowUpRight, CircleDollarSign, PiggyBank, Wallet } from "lucide-react";
 import { useMemo, useState } from "react";
 import { AreaTrend, Donut } from "../components/charts.js";
-import { Card, Delta, Kpi, Panel } from "../components/ui.js";
+import { AnimatedNumber, Card, Delta, Kpi, Panel } from "../components/ui.js";
 import { fx, money, percent, signedPercent, usd } from "../lib/format.js";
 import type { Dashboard, Snapshot } from "../lib/types.js";
 
-function changeSince(history: Snapshot[], days: number) {
+// Variação do saldo atual (ao vivo) em relação ao snapshot mais próximo de `days` atrás.
+function changeSince(history: Snapshot[], current: number, days: number) {
   if (!history.length) return 0;
-  const last = history[history.length - 1]!.totalBrl;
   const cutoff = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
   const past = [...history].reverse().find((item) => item.date <= cutoff) ?? history[0]!;
-  return past.totalBrl > 0 ? last / past.totalBrl - 1 : 0;
+  return past.totalBrl > 0 ? current / past.totalBrl - 1 : 0;
 }
 
 const ranges = [
@@ -59,15 +59,16 @@ export function DashboardPage({ data }: { data: Dashboard }) {
       .sort((a, b) => b.value - a.value);
   }, [data]);
 
-  const last = data.history.at(-1);
-  const previous = data.history.at(-2);
-  const dayChange = last && previous && previous.totalBrl > 0 ? last.totalBrl / previous.totalBrl - 1 : 0;
-  const monthChange = changeSince(data.history, 30);
-  const yearChange = changeSince(data.history, 365);
-  const peak = data.history.reduce((max, item) => Math.max(max, item.totalBrl), 0);
+  // "Hoje" = saldo atual vs. o último fechamento registrado em um dia anterior a hoje.
+  const today = new Date().toISOString().slice(0, 10);
+  const yesterday = [...data.history].reverse().find((item) => item.date < today);
+  const dayChange = yesterday && yesterday.totalBrl > 0 ? data.totalBrl / yesterday.totalBrl - 1 : 0;
+  const monthChange = changeSince(data.history, data.totalBrl, 30);
+  const yearChange = changeSince(data.history, data.totalBrl, 365);
+  const peak = data.history.reduce((max, item) => Math.max(max, item.totalBrl), data.totalBrl);
 
   return (
-    <div className="dashboard">
+    <div className="dashboard stagger">
       <section className="hero-grid">
         <Card glow className="hero-card">
           <div className="hero-top">
@@ -76,7 +77,9 @@ export function DashboardPage({ data }: { data: Dashboard }) {
             </span>
             <Delta value={dayChange} suffix="hoje" />
           </div>
-          <strong className="hero-value">{money(data.totalBrl)}</strong>
+          <strong className="hero-value">
+            <AnimatedNumber value={data.totalBrl} format={money} />
+          </strong>
           <div className="hero-meta">
             <span>{usd(data.totalUsd)}</span>
             <span className="dot-sep" />
@@ -86,39 +89,41 @@ export function DashboardPage({ data }: { data: Dashboard }) {
             <div className="hero-stat">
               <span>30 dias</span>
               <strong className={monthChange >= 0 ? "positive-text" : "negative-text"}>
-                {signedPercent(monthChange)}
+                <AnimatedNumber value={monthChange} format={signedPercent} countUp={false} />
               </strong>
             </div>
             <div className="hero-stat">
               <span>12 meses</span>
               <strong className={yearChange >= 0 ? "positive-text" : "negative-text"}>
-                {signedPercent(yearChange)}
+                <AnimatedNumber value={yearChange} format={signedPercent} countUp={false} />
               </strong>
             </div>
             <div className="hero-stat">
               <span>Pico histórico</span>
-              <strong>{money(peak)}</strong>
+              <strong>
+                <AnimatedNumber value={peak} format={money} />
+              </strong>
             </div>
           </div>
         </Card>
-        <div className="kpi-stack">
+        <div className="kpi-stack stagger">
           <Kpi
             icon={data.annualReturn >= 0 ? ArrowUpRight : ArrowDownRight}
             label="Rentabilidade no ano"
-            value={percent(data.annualReturn)}
+            value={<AnimatedNumber value={data.annualReturn} format={percent} />}
             tone={data.annualReturn >= 0 ? "positive" : "negative"}
             detail="descontando aportes"
           />
           <Kpi
             icon={CircleDollarSign}
             label="Aportes no ano"
-            value={money(data.annualContributions)}
+            value={<AnimatedNumber value={data.annualContributions} format={money} />}
             detail={`${new Date().getFullYear()}`}
           />
           <Kpi
             icon={PiggyBank}
             label="Reserva de emergência"
-            value={money(data.reserveBrl)}
+            value={<AnimatedNumber value={data.reserveBrl} format={money} />}
             detail={`${percent(data.totalBrl ? data.reserveBrl / data.totalBrl : 0)} do patrimônio`}
           />
         </div>

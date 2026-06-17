@@ -10,12 +10,15 @@ import { useToast } from "../lib/toast.js";
 import type { ManualPosition } from "../lib/types.js";
 
 const groups = [
-  { id: "dollar", label: "Dólar", icon: DollarSign, hint: "Contas e carteiras em dólar" },
-  { id: "cash", label: "Caixa BR", icon: Banknote, hint: "Saldo disponível em reais" },
-  { id: "reserve", label: "Reserva de emergência", icon: PiggyBank, hint: "Liquidez para imprevistos" },
-  { id: "fixed_income", label: "Renda fixa", icon: Landmark, hint: "Tesouro e títulos" },
-  { id: "global", label: "Ações globais", icon: Coins, hint: "Exposição internacional" }
+  { id: "dollar", label: "Dólar", icon: DollarSign, hint: "Contas e carteiras em dólar", tracksInvested: false },
+  { id: "cash", label: "Caixa BR", icon: Banknote, hint: "Saldo disponível em reais", tracksInvested: false },
+  { id: "reserve", label: "Reserva de emergência", icon: PiggyBank, hint: "Liquidez para imprevistos", tracksInvested: false },
+  { id: "fixed_income", label: "Renda fixa", icon: Landmark, hint: "Tesouro e títulos", tracksInvested: true },
+  { id: "global", label: "Ações globais", icon: Coins, hint: "Exposição internacional", tracksInvested: true }
 ] as const;
+
+const tracksInvested = (category: string) =>
+  groups.find((group) => group.id === category)?.tracksInvested ?? false;
 
 export function PositionsPage({ onChanged }: { onChanged: () => Promise<void> }) {
   const toast = useToast();
@@ -47,7 +50,7 @@ export function PositionsPage({ onChanged }: { onChanged: () => Promise<void> })
         </Button>
       </SectionHeading>
 
-      <div className="position-groups">
+      <div className="position-groups stagger">
         {groups.map((group) => {
           const items = positions.filter((position) => position.category === group.id);
           if (!items.length && group.id === "global") return null;
@@ -153,7 +156,7 @@ function PositionDrawer({
       const payload = {
         category,
         name: name.trim(),
-        invested: Number(invested) || 0,
+        invested: tracksInvested(category) ? Number(invested) || 0 : 0,
         currentValue: Number(currentValue) || 0,
         currency: currencyCode,
         notes: initial.notes ?? ""
@@ -213,9 +216,11 @@ function PositionDrawer({
           </Field>
         </div>
         <div className="field-row">
-          <Field label={`Investimento (${currencyCode})`}>
-            <NumberInput value={invested} min="0" onChange={(event) => setInvested(event.target.value)} />
-          </Field>
+          {tracksInvested(category) && (
+            <Field label={`Investimento (${currencyCode})`}>
+              <NumberInput value={invested} min="0" onChange={(event) => setInvested(event.target.value)} />
+            </Field>
+          )}
           <Field label={`Valor atual (${currencyCode})`}>
             <NumberInput value={currentValue} min="0" onChange={(event) => setCurrentValue(event.target.value)} />
           </Field>

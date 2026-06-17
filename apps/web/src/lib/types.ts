@@ -22,6 +22,7 @@ export type Asset = {
   priceCurrency: string;
   priceStatus: string;
   priceFetchedAt: string | null;
+  dayChange: number | null;
 };
 
 export type Snapshot = {
@@ -71,6 +72,13 @@ export type Contribution = {
   date: string;
   amount: number;
   notes?: string;
+};
+
+export type CryptoSearchResult = {
+  id: string;
+  symbol: string;
+  name: string;
+  rank: number | null;
 };
 
 export type AllocationTarget = { category: string; weight: number };

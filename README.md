@@ -9,6 +9,18 @@ Os dados ficam num banco SQLite local e **nunca** são versionados.
 
 <img src="apps/web/public/logo.png" alt="Projeto 41" width="160">
 
+## Últimos updates
+
+Destaques recentes — histórico completo e versões em
+[`CHANGELOG.md`](CHANGELOG.md).
+
+- Cotações de cripto pela CoinGecko, com busca de moedas por símbolo ou nome no
+  cadastro de operações.
+- Cadastro de operação flexível: preencha dois dos três campos e o terceiro é
+  calculado automaticamente.
+- Carteira cripto: operação em USD ou BRL e opção de descontar a taxa Binance.
+- Seletor de data e steppers numéricos no tema do app.
+
 ## Requisitos
 
 - Node.js 22.13+ e npm 10+
@@ -48,6 +60,26 @@ compilado, então não é necessário manter o Vite em execução.
 Este projeto não possui autenticação e foi feito para uso local. Não exponha a
 porta diretamente na internet.
 
+## Atalho na Área de Trabalho do Windows (WSL)
+
+Com o projeto instalado dentro do WSL, execute uma vez:
+
+```bash
+npm run windows:shortcut
+```
+
+O comando cria um atalho chamado **Projeto 41** na Área de Trabalho do Windows.
+Ao abrir o atalho:
+
+- o servidor é reutilizado se já estiver em execução;
+- dependências e frontend são preparados automaticamente se ainda não existirem;
+- o servidor inicia oculto em segundo plano;
+- o navegador abre em `http://127.0.0.1:3001`.
+
+Em caso de erro, consulte `data/projeto41-launcher.log`. Se o projeto for movido
+para outra pasta ou distribuição WSL, execute o comando novamente para recriar
+o atalho.
+
 ## Como usar
 
 Tudo é cadastrado e editado direto no app:
@@ -81,12 +113,13 @@ offline depois.
 | --- | --- | --- |
 | [brapi](https://brapi.dev) | Ações da B3 | `BRAPI_TOKEN` no `.env` (token gratuito) |
 | Banco Central (PTAX) | USD/BRL | automático, sem chave |
-| `CRYPTO_PRICE_URL` | Criptomoedas | opcional (veja `.env.example`) |
+| [CoinGecko](https://www.coingecko.com/en/api) | Criptomoedas | `COINGECKO_API_KEY` opcional (plano Demo) |
 | `TZ` | Horários das atualizações e snapshots | fuso IANA, como `America/Sao_Paulo` |
 
-Sem `BRAPI_TOKEN` as ações ficam sem cotação; sem `CRYPTO_PRICE_URL` as criptos
-ficam sem cotação. O restante do app continua funcionando normalmente, e você
-pode cadastrar operações de qualquer forma.
+Sem `BRAPI_TOKEN` as ações ficam sem cotação. As criptos usam o CoinGecko via
+API pública mesmo sem chave; `COINGECKO_API_KEY` (plano Demo) eleva o limite de
+requisições. O restante do app continua funcionando normalmente, e você pode
+cadastrar operações de qualquer forma.
 
 ## Dados e privacidade
 

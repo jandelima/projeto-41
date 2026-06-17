@@ -12,8 +12,12 @@ import type { IconService } from "./icons/icon-service.js";
 import { buildOperationsCsv } from "./export/operations-csv.js";
 import { buildDashboard, buildPortfolios } from "./services/portfolio-service.js";
 
+type CryptoSearchHit = { id: string; symbol: string; name: string; rank: number | null };
+
 type PriceService = {
   runAll(): Promise<unknown>;
+  ensureCryptoPrice?(symbol: string): Promise<boolean>;
+  searchCrypto?(query: string): Promise<CryptoSearchHit[]>;
 };
 
 export function buildApp({
@@ -72,18 +76,43 @@ export function buildApp({
   app.get("/api/dashboard", async () => buildDashboard(db));
   app.get("/api/portfolios", async () => buildPortfolios(db));
 
+  const cryptoAssetSchema = z.object({
+    slug: z.string().trim().optional(),
+    name: z.string().trim().optional()
+  });
+
+  function rememberCryptoAsset(
+    operation: { portfolio: "crypto" | "b3"; asset: string },
+    body: unknown
+  ) {
+    if (operation.portfolio !== "crypto") return;
+    const { slug, name } = cryptoAssetSchema.parse(body);
+    if (!slug) return;
+    db.cryptoAssets.upsert({ symbol: operation.asset, slug, name: name || operation.asset });
+  }
+
   app.get("/api/operations", async (request) => {
     const query = z.object({ portfolio: z.enum(["crypto", "b3"]).optional() }).parse(request.query);
     return db.operations.list(query.portfolio);
   });
+  app.get("/api/crypto/search", async (request) => {
+    const { q } = z.object({ q: z.string().trim().min(1).max(80) }).parse(request.query);
+    if (!priceService.searchCrypto) return [];
+    return priceService.searchCrypto(q);
+  });
   app.post("/api/operations", async (request, reply) => {
     const operation = operationSchema.parse(request.body);
+    rememberCryptoAsset(operation, request.body);
     const id = db.operations.create(operation);
+    if (operation.portfolio === "crypto" && priceService.ensureCryptoPrice) {
+      await priceService.ensureCryptoPrice(operation.asset);
+    }
     return reply.status(201).send({ id, portfolios: buildPortfolios(db) });
   });
   app.put("/api/operations/:id", async (request) => {
     const { id } = z.object({ id: z.coerce.number().int().positive() }).parse(request.params);
     const operation = operationSchema.parse(request.body);
+    rememberCryptoAsset(operation, request.body);
     db.operations.update(id, operation);
     return { ok: true, portfolios: buildPortfolios(db) };
   });

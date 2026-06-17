@@ -1,6 +1,8 @@
-import { ArrowDown, ArrowUp, Coins, Download, Pencil, Plus, Save, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronDown, ChevronUp, Coins, Download, Pencil, Plus, Save, Sparkles, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
+import { CryptoAssetSearch } from "../components/CryptoAssetSearch.js";
+import { DateField } from "../components/datepicker.js";
 import { Drawer, useConfirm } from "../components/dialog.js";
 import {
   AssetIcon,
@@ -20,7 +22,7 @@ import { api } from "../lib/api.js";
 import { currency as fmtCurrency, currencyRaw, decimal, longDate, money, percent } from "../lib/format.js";
 import { portfolioIconUrl } from "../lib/icons.js";
 import { useToast } from "../lib/toast.js";
-import type { Asset, Operation } from "../lib/types.js";
+import type { Asset, CryptoSearchResult, Operation } from "../lib/types.js";
 
 type SortKey = "asset" | "quantity" | "averagePrice" | "price" | "marketValueBrl" | "totalReturn";
 
@@ -30,6 +32,7 @@ export function PortfolioPage({
   portfolio,
   assets,
   investableTotal,
+  usdBrl = 0,
   onChanged
 }: {
   title: string;
@@ -37,6 +40,7 @@ export function PortfolioPage({
   portfolio: "crypto" | "b3";
   assets: Asset[];
   investableTotal: number;
+  usdBrl?: number;
   onChanged: () => Promise<void>;
 }) {
   const toast = useToast();
@@ -122,7 +126,7 @@ export function PortfolioPage({
         </Button>
       </SectionHeading>
 
-      <div className="summary-row">
+      <div className="summary-row stagger">
         <MiniStat label="Saldo atual" value={money(totalBalance)} />
         <MiniStat label="Ativos" value={String(held.length)} />
         {isCrypto ? (
@@ -240,6 +244,7 @@ export function PortfolioPage({
           portfolio={portfolio}
           initial={editing}
           assetNames={assetNames}
+          usdBrl={usdBrl}
           onClose={() => { setDrawer(false); setEditing(null); }}
           onSaved={async () => {
             setDrawer(false);
@@ -257,52 +262,95 @@ function OperationDrawer({
   portfolio,
   initial,
   assetNames,
+  usdBrl,
   onClose,
   onSaved
 }: {
   portfolio: "crypto" | "b3";
   initial: Operation | null;
   assetNames: string[];
+  usdBrl: number;
   onClose: () => void;
   onSaved: () => void;
 }) {
   const toast = useToast();
   const isCrypto = portfolio === "crypto";
-  const code = isCrypto ? "USD" : "BRL";
+  // Cripto é sempre armazenado em USD; entryCurrency é só a moeda de digitação.
+  const storedCode = isCrypto ? "USD" : "BRL";
   const initialQty = initial?.quantity ?? 0;
   const initialTotal = initial?.total ?? 0;
 
   const [type, setType] = useState<"buy" | "sell">(initial?.type ?? "buy");
   const [asset, setAsset] = useState(initial?.asset ?? "");
+  const [slug, setSlug] = useState("");
+  const [assetName, setAssetName] = useState(initial?.asset ?? "");
   const [date, setDate] = useState(initial && initial.date !== "1900-01-01" ? initial.date : new Date().toISOString().slice(0, 10));
-  const [quantity, setQuantity] = useState(initialQty ? String(initialQty) : "");
-  const [unit, setUnit] = useState(initialQty > 0 ? String(initialTotal / initialQty) : "");
-  const [total, setTotal] = useState(initialTotal ? String(initialTotal) : "");
-  const [lastEdited, setLastEdited] = useState<"unit" | "total">(isCrypto ? "total" : "unit");
+  const [entryCurrency, setEntryCurrency] = useState<"USD" | "BRL">("USD");
+  const [useFee, setUseFee] = useState(false);
+  const canUseBrl = isCrypto && usdBrl > 0;
+  const code = isCrypto ? entryCurrency : "BRL";
+
+  // Quantidade × Preço = Total. O usuário preenche dois campos quaisquer e o
+  // terceiro é resolvido sozinho. `recent` guarda a ordem de edição: o último
+  // item é o campo atualmente calculado (o "stale").
+  const [fields, setFields] = useState<Record<TradeField, string>>(() => ({
+    qty: initialQty ? String(initialQty) : "",
+    unit: initialQty > 0 ? String(round(initialTotal / initialQty)) : "",
+    total: initialTotal ? String(initialTotal) : ""
+  }));
+  const [recent, setRecent] = useState<TradeField[]>(
+    initial || isCrypto ? ["qty", "total", "unit"] : ["qty", "unit", "total"]
+  );
+  const solved = recent[2] as TradeField;
   const [saving, setSaving] = useState(false);
 
-  function recalc(nextQty: string, nextUnit: string, nextTotal: string, edited: "unit" | "total" | "qty") {
-    const q = Number(nextQty);
-    if (edited === "unit") {
-      setUnit(nextUnit);
-      setTotal(q > 0 && nextUnit !== "" ? String(round(q * Number(nextUnit))) : nextTotal);
-      setLastEdited("unit");
-    } else if (edited === "total") {
-      setTotal(nextTotal);
-      setUnit(q > 0 && nextTotal !== "" ? String(round(Number(nextTotal) / q)) : nextUnit);
-      setLastEdited("total");
-    } else {
-      setQuantity(nextQty);
-      if (lastEdited === "unit") setTotal(q > 0 && nextUnit !== "" ? String(round(q * Number(nextUnit))) : nextTotal);
-      else setUnit(q > 0 && nextTotal !== "" ? String(round(Number(nextTotal) / q)) : nextUnit);
-    }
+  function editField(field: TradeField, raw: string) {
+    const next = { ...fields, [field]: raw };
+    const order: TradeField[] = [field, ...recent.filter((f) => f !== field)];
+    const target = order[2] as TradeField;
+    next[target] = solveTrade(target, next);
+    setFields(next);
+    setRecent(order);
+  }
+
+  // Troca a moeda de digitação convertendo preço e total (a quantidade não muda).
+  function changeCurrency(next: "USD" | "BRL") {
+    if (next === entryCurrency) return;
+    if (next === "BRL" && !canUseBrl) return;
+    const factor = next === "BRL" ? usdBrl : 1 / usdBrl;
+    setFields((f) => ({
+      qty: f.qty,
+      unit: f.unit !== "" ? String(round(Number(f.unit) * factor)) : "",
+      total: f.total !== "" ? String(round(Number(f.total) * factor)) : ""
+    }));
+    setEntryCurrency(next);
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!asset.trim() || Number(quantity) <= 0 || Number(total) < 0) {
-      toast.notify("Preencha ativo, quantidade e valor", "error");
+    let quantity = Number(fields.qty);
+    let total = Number(fields.total);
+    if (!asset.trim()) {
+      toast.notify(isCrypto ? "Selecione um ativo na busca" : "Preencha o ativo", "error");
       return;
+    }
+    if (!(quantity > 0) || !Number.isFinite(total) || total < 0) {
+      toast.notify("Preencha ao menos dois dos três valores", "error");
+      return;
+    }
+    // Operação digitada em BRL é convertida para USD antes de gravar.
+    if (isCrypto && entryCurrency === "BRL") {
+      if (!(usdBrl > 0)) {
+        toast.notify("Cotação USD/BRL indisponível para converter", "error");
+        return;
+      }
+      total = round(total / usdBrl);
+    }
+    // Taxa Binance (0,1%): na compra reduz a quantidade recebida; na venda
+    // reduz o valor recebido. O que foi pago/vendido permanece igual.
+    if (isCrypto && useFee) {
+      if (type === "buy") quantity = round(quantity * (1 - BINANCE_FEE));
+      else total = round(total * (1 - BINANCE_FEE));
     }
     setSaving(true);
     try {
@@ -311,10 +359,11 @@ function OperationDrawer({
         type,
         asset: asset.trim().toUpperCase(),
         date,
-        quantity: Number(quantity),
-        total: Number(total),
-        currency: code,
-        notes: initial?.notes ?? ""
+        quantity,
+        total,
+        currency: storedCode,
+        notes: initial?.notes ?? "",
+        ...(isCrypto && slug ? { slug, name: assetName } : {})
       };
       await api(initial ? `/operations/${initial.id}` : "/operations", {
         method: initial ? "PUT" : "POST",
@@ -328,8 +377,13 @@ function OperationDrawer({
     }
   }
 
-  const previewQty = Number(quantity) || 0;
-  const previewTotal = Number(total) || 0;
+  const feeOn = isCrypto && useFee;
+  const grossQty = Number(fields.qty) || 0;
+  const grossTotal = Number(fields.total) || 0;
+  const netQty = feeOn && type === "buy" ? round(grossQty * (1 - BINANCE_FEE)) : grossQty;
+  const netTotal = feeOn && type === "sell" ? round(grossTotal * (1 - BINANCE_FEE)) : grossTotal;
+  const feeQty = grossQty - netQty;
+  const feeTotal = grossTotal - netTotal;
 
   return (
     <Drawer
@@ -358,61 +412,179 @@ function OperationDrawer({
             ]}
           />
         </Field>
-        <Field label="Ativo">
-          <input
-            list="asset-options"
-            value={asset}
-            onChange={(event) => setAsset(event.target.value.toUpperCase())}
-            placeholder={isCrypto ? "BTC" : "PETR4"}
-            autoFocus
-          />
-          <datalist id="asset-options">
-            {assetNames.map((name) => (
-              <option key={name} value={name} />
-            ))}
-          </datalist>
+        <Field label="Ativo" hint={isCrypto ? "Busca na CoinGecko por símbolo ou nome." : undefined}>
+          {isCrypto ? (
+            <CryptoAssetSearch
+              selected={asset ? { symbol: asset, name: assetName || asset } : null}
+              onSelect={(result: CryptoSearchResult) => {
+                setAsset(result.symbol);
+                setSlug(result.id);
+                setAssetName(result.name);
+              }}
+              onClear={() => {
+                setAsset("");
+                setSlug("");
+                setAssetName("");
+              }}
+              autoFocus
+            />
+          ) : (
+            <>
+              <input
+                list="asset-options"
+                value={asset}
+                onChange={(event) => setAsset(event.target.value.toUpperCase())}
+                placeholder="PETR4"
+                autoFocus
+              />
+              <datalist id="asset-options">
+                {assetNames.map((name) => (
+                  <option key={name} value={name} />
+                ))}
+              </datalist>
+            </>
+          )}
         </Field>
         <Field label="Data">
-          <input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
+          <DateField value={date} onChange={setDate} />
         </Field>
-        <div className="field-row">
-          <Field label="Quantidade">
-            <NumberInput
-              value={quantity}
-              min="0"
-              onChange={(event) => recalc(event.target.value, unit, total, "qty")}
-              placeholder="0"
-            />
-          </Field>
-          <Field label={`Preço unitário (${code})`}>
-            <NumberInput
-              value={unit}
-              min="0"
-              onChange={(event) => recalc(quantity, event.target.value, total, "unit")}
-              placeholder="0"
-            />
-          </Field>
-        </div>
-        <Field label={`Valor total (${code})`} hint="Ajuste o total diretamente se houver taxas.">
-          <NumberInput
-            value={total}
-            min="0"
-            onChange={(event) => recalc(quantity, unit, event.target.value, "total")}
-            placeholder="0"
+        {isCrypto && (
+          <div className="eq-currency" role="group" aria-label="Moeda da operação">
+            <button
+              type="button"
+              className={entryCurrency === "USD" ? "active" : ""}
+              onClick={() => changeCurrency("USD")}
+            >
+              USD
+            </button>
+            <button
+              type="button"
+              className={entryCurrency === "BRL" ? "active" : ""}
+              disabled={!canUseBrl}
+              title={canUseBrl ? undefined : "Cotação USD/BRL indisponível"}
+              onClick={() => changeCurrency("BRL")}
+            >
+              BRL
+            </button>
+          </div>
+        )}
+        <div className="trade-eq" role="group" aria-label="Quantidade, preço e total">
+          <EqTerm
+            label="Quantidade"
+            value={fields.qty}
+            solved={solved === "qty"}
+            step={isCrypto ? "0.001" : "1"}
+            onChange={(value) => editField("qty", value)}
           />
-        </Field>
+          <span className="trade-op" aria-hidden>×</span>
+          <EqTerm
+            label="Preço"
+            code={code}
+            value={fields.unit}
+            solved={solved === "unit"}
+            step="0.01"
+            onChange={(value) => editField("unit", value)}
+          />
+          <span className="trade-op" aria-hidden>=</span>
+          <EqTerm
+            label="Total"
+            code={code}
+            value={fields.total}
+            solved={solved === "total"}
+            step="0.01"
+            onChange={(value) => editField("total", value)}
+          />
+        </div>
+        {isCrypto && (
+          <label className="fee-toggle">
+            <input type="checkbox" checked={useFee} onChange={(event) => setUseFee(event.target.checked)} />
+            <span>Descontar taxa Binance (0,1%)</span>
+          </label>
+        )}
         <div className="op-preview">
           <div>
-            <span>{type === "buy" ? "Comprando" : "Vendendo"}</span>
-            <strong>{decimal(previewQty, 8)} {asset || "—"}</strong>
+            <span>{type === "buy" ? "Você recebe" : "Você vende"}</span>
+            <strong>{decimal(netQty, 8)} {asset || "—"}</strong>
+            {feeOn && type === "buy" && feeQty > 0 && (
+              <small className="op-fee">taxa −{decimal(feeQty, 8)} {asset || ""}</small>
+            )}
           </div>
           <div className="right">
-            <span>Total</span>
-            <strong>{fmtCurrency(previewTotal, code)}</strong>
+            <span>{type === "buy" ? "Você paga" : "Você recebe"}</span>
+            <strong>{fmtCurrency(netTotal, code)}</strong>
+            {feeOn && type === "sell" && feeTotal > 0 && (
+              <small className="op-fee">taxa −{fmtCurrency(feeTotal, code)}</small>
+            )}
           </div>
         </div>
       </form>
     </Drawer>
+  );
+}
+
+type TradeField = "qty" | "unit" | "total";
+
+// Resolve o campo "alvo" a partir dos outros dois (qty × unit = total).
+// Retorna "" quando os dois insumos ainda não estão completos.
+function solveTrade(target: TradeField, f: Record<TradeField, string>): string {
+  const q = Number(f.qty);
+  const u = Number(f.unit);
+  const t = Number(f.total);
+  if (target === "qty") return f.unit !== "" && u > 0 && f.total !== "" ? String(round(t / u)) : "";
+  if (target === "unit") return f.qty !== "" && q > 0 && f.total !== "" ? String(round(t / q)) : "";
+  return f.qty !== "" && f.unit !== "" && q > 0 ? String(round(q * u)) : "";
+}
+
+function EqTerm({
+  label,
+  code,
+  value,
+  solved,
+  step = "any",
+  onChange
+}: {
+  label: string;
+  code?: string;
+  value: string;
+  solved: boolean;
+  step?: string;
+  onChange: (value: string) => void;
+}) {
+  function bump(direction: 1 | -1) {
+    const delta = Number(step) || 0;
+    const next = Math.max(0, round((Number(value) || 0) + direction * delta));
+    onChange(String(next));
+  }
+  return (
+    <label className={`eq-term ${solved ? "solved" : ""}`}>
+      <span className="eq-label">
+        <span className="eq-name">{label}</span>
+        {solved ? (
+          <span className="eq-auto">
+            <Sparkles size={11} /> auto
+          </span>
+        ) : (
+          code && <span className="eq-unit">{code}</span>
+        )}
+      </span>
+      <div className="eq-input">
+        <NumberInput
+          value={value}
+          min="0"
+          step={step}
+          placeholder="0"
+          onChange={(event) => onChange(event.target.value)}
+        />
+        <span className="eq-step">
+          <button type="button" tabIndex={-1} aria-label="Aumentar" onClick={() => bump(1)}>
+            <ChevronUp size={12} />
+          </button>
+          <button type="button" tabIndex={-1} aria-label="Diminuir" onClick={() => bump(-1)}>
+            <ChevronDown size={12} />
+          </button>
+        </span>
+      </div>
+    </label>
   );
 }
 
@@ -479,3 +651,6 @@ function InlineMoney({ value, onSave }: { value: number; onSave: (value: number)
 function round(value: number) {
   return Math.round(value * 1e8) / 1e8;
 }
+
+// Taxa padrão de spot da Binance (0,1%).
+const BINANCE_FEE = 0.001;
