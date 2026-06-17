@@ -89,4 +89,39 @@ describe("database", () => {
     expect(db.snapshots.list()).toHaveLength(1);
     expect(db.snapshots.list()[0]?.totalBrl).toBe(110);
   });
+
+  it("rolls the daily price baseline only when a new day arrives", () => {
+    db = createDatabase(":memory:");
+    const base = {
+      symbol: "BTC",
+      currency: "USD" as const,
+      provider: "test",
+      marketTime: null,
+      error: null
+    };
+
+    // Primeiro dia: o baseline é o próprio preço (sem referência anterior).
+    db.prices.upsert({ ...base, price: 100, fetchedAt: "2026-06-09T10:00:00Z" });
+    let row = db.prices.get("BTC");
+    expect(row?.prevPrice).toBe(100);
+    expect(row?.prevDay).toBe("2026-06-09");
+
+    // Mais cotações no mesmo dia não mudam o baseline.
+    db.prices.upsert({ ...base, price: 120, fetchedAt: "2026-06-09T18:00:00Z" });
+    row = db.prices.get("BTC");
+    expect(row?.prevPrice).toBe(100);
+    expect(row?.prevDay).toBe("2026-06-09");
+
+    // Novo dia: o último preço do dia anterior (120) vira a referência.
+    db.prices.upsert({ ...base, price: 132, fetchedAt: "2026-06-10T09:00:00Z" });
+    row = db.prices.get("BTC");
+    expect(row?.prevPrice).toBe(120);
+    expect(row?.prevDay).toBe("2026-06-09");
+
+    // Outra cotação ainda no dia 10 mantém a referência do dia 9.
+    db.prices.upsert({ ...base, price: 140, fetchedAt: "2026-06-10T15:00:00Z" });
+    row = db.prices.get("BTC");
+    expect(row?.prevPrice).toBe(120);
+    expect(row?.prevDay).toBe("2026-06-09");
+  });
 });

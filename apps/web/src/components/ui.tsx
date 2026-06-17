@@ -1,9 +1,84 @@
 import { ArrowDownRight, ArrowUpRight, Search } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ComponentType, InputHTMLAttributes, ReactNode } from "react";
 import { signedPercent } from "../lib/format.js";
 
 type IconType = ComponentType<{ size?: number | string; className?: string }>;
+
+function prefersReducedMotion() {
+  return (
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
+}
+
+/**
+ * Número com contagem animada (count-up) e "flash" verde/vermelho quando o valor
+ * muda. Recebe o próprio formatador para animar sobre valores intermediários.
+ * Respeita prefers-reduced-motion e o modo privacidade (quando o formatador
+ * devolve sempre o mesmo texto mascarado, não anima nem pisca).
+ */
+export function AnimatedNumber({
+  value,
+  format,
+  className = "",
+  duration = 650,
+  countUp = true
+}: {
+  value: number;
+  format: (value: number) => string;
+  className?: string;
+  duration?: number;
+  countUp?: boolean;
+}) {
+  const constant = format(value) === format(value === 0 ? 1 : value * 0.5);
+  const animate = !constant && !prefersReducedMotion();
+
+  const [display, setDisplay] = useState(() => (animate && countUp ? 0 : value));
+  const displayRef = useRef(display);
+  const frameRef = useRef<number | undefined>(undefined);
+  const mounted = useRef(false);
+  const [flash, setFlash] = useState("");
+
+  useEffect(() => {
+    if (!animate) {
+      displayRef.current = value;
+      setDisplay(value);
+      mounted.current = true;
+      return;
+    }
+    const from = displayRef.current;
+    const to = value;
+    if (from === to) {
+      mounted.current = true;
+      return;
+    }
+    if (mounted.current) setFlash(to > from ? "flash-up" : "flash-down");
+    const start = performance.now();
+    const step = (now: number) => {
+      const progress = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const next = progress < 1 ? from + (to - from) * eased : to;
+      displayRef.current = next;
+      setDisplay(next);
+      if (progress < 1) frameRef.current = requestAnimationFrame(step);
+    };
+    frameRef.current = requestAnimationFrame(step);
+    mounted.current = true;
+    return () => {
+      if (frameRef.current) cancelAnimationFrame(frameRef.current);
+    };
+  }, [value, animate, duration]);
+
+  useEffect(() => {
+    if (!flash) return;
+    const id = setTimeout(() => setFlash(""), 900);
+    return () => clearTimeout(id);
+  }, [flash]);
+
+  return <span className={`tnum ${flash} ${className}`.trim()}>{format(display)}</span>;
+}
 
 export function Card({
   children,

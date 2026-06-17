@@ -2,7 +2,7 @@
   "name": "projeto-41",
   "private": true,
   "type": "module",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "workspaces": [
     "apps/*",
     "packages/*"
@@ -17,6 +17,7 @@
     "lint": "eslint .",
     "import": "npm run import -w @projeto41/api --",
     "icons": "npm run icons -w @projeto41/api",
+    "windows:shortcut": "node scripts/install-windows-shortcut.mjs",
     "start": "npm run start -w @projeto41/api"
   },
   "devDependencies": {

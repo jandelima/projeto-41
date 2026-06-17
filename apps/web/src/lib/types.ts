@@ -22,6 +22,7 @@ export type Asset = {
   priceCurrency: string;
   priceStatus: string;
   priceFetchedAt: string | null;
+  dayChange: number | null;
 };
 
 export type Snapshot = {

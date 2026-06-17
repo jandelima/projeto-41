@@ -16,7 +16,7 @@ import {
   Wallet,
   X
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ComponentType } from "react";
 import { AllocationPage } from "../pages/Allocation.js";
 import { ContributionsPage } from "../pages/Contributions.js";
@@ -26,8 +26,11 @@ import { PlanningPage } from "../pages/Planning.js";
 import { PortfolioPage } from "../pages/Portfolio.js";
 import { PositionsPage } from "../pages/Positions.js";
 import { Loading } from "../components/ui.js";
+import { Ticker, TickerSettings } from "../components/ticker.js";
+import type { TickerCandidate } from "../components/ticker.js";
 import { api } from "../lib/api.js";
 import { relativeTime } from "../lib/format.js";
+import { portfolioIconUrl } from "../lib/icons.js";
 import { usePrivacy } from "../lib/privacy.js";
 import { useTheme } from "../lib/theme.js";
 import { useToast } from "../lib/toast.js";
@@ -71,6 +74,18 @@ const nav: { group: string; items: NavItem[] }[] = [
 
 const allItems = nav.flatMap((section) => section.items);
 
+const TICKER_HIDDEN_KEY = "projeto41-ticker-hidden";
+
+function readTickerHidden(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = window.localStorage.getItem(TICKER_HIDDEN_KEY);
+    return new Set<string>(raw ? (JSON.parse(raw) as string[]) : []);
+  } catch {
+    return new Set();
+  }
+}
+
 export function App() {
   const { theme, toggle } = useTheme();
   const privacy = usePrivacy();
@@ -84,6 +99,21 @@ export function App() {
   const [error, setError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [tickerHidden, setTickerHidden] = useState<Set<string>>(readTickerHidden);
+  const [tickerOpen, setTickerOpen] = useState(false);
+
+  useEffect(() => {
+    window.localStorage.setItem(TICKER_HIDDEN_KEY, JSON.stringify([...tickerHidden]));
+  }, [tickerHidden]);
+
+  const toggleTickerAsset = useCallback((symbol: string) => {
+    setTickerHidden((current) => {
+      const next = new Set(current);
+      if (next.has(symbol)) next.delete(symbol);
+      else next.add(symbol);
+      return next;
+    });
+  }, []);
 
   const loadDashboard = useCallback(async () => {
     try {
@@ -97,6 +127,35 @@ export function App() {
   }, []);
 
   useEffect(() => void loadDashboard(), [loadDashboard]);
+
+  useEffect(() => {
+    const REFRESH_INTERVAL = 2 * 60 * 1000;
+    let timer: ReturnType<typeof setInterval> | undefined;
+
+    const start = () => {
+      if (timer) return;
+      timer = setInterval(() => void loadDashboard(), REFRESH_INTERVAL);
+    };
+    const stop = () => {
+      if (timer) clearInterval(timer);
+      timer = undefined;
+    };
+    const onVisibility = () => {
+      if (document.hidden) {
+        stop();
+      } else {
+        void loadDashboard();
+        start();
+      }
+    };
+
+    if (!document.hidden) start();
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      stop();
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [loadDashboard]);
 
   async function refreshPrices() {
     setRefreshing(true);
@@ -112,6 +171,30 @@ export function App() {
   }
 
   const current = allItems.find((item) => item.id === page)!;
+
+  const tickerCandidates = useMemo<TickerCandidate[]>(() => {
+    if (!dashboard) return [];
+    const tagged = [
+      ...dashboard.portfolios.crypto.map((asset) => ({ asset, portfolio: "crypto" as const })),
+      ...dashboard.portfolios.b3.map((asset) => ({ asset, portfolio: "b3" as const }))
+    ];
+    return tagged
+      .filter(({ asset }) => asset.quantity > 1e-9 && asset.price > 0)
+      .sort((a, b) => b.asset.marketValueBrl - a.asset.marketValueBrl)
+      .map(({ asset, portfolio }) => ({
+        symbol: asset.asset,
+        price: asset.price,
+        currency: asset.priceCurrency,
+        change: asset.dayChange,
+        icon: portfolioIconUrl(portfolio, asset.asset),
+        portfolio
+      }));
+  }, [dashboard]);
+
+  const tickerItems = useMemo(
+    () => tickerCandidates.filter((item) => !tickerHidden.has(item.symbol)),
+    [tickerCandidates, tickerHidden]
+  );
 
   return (
     <div className="app-shell">
@@ -172,6 +255,9 @@ export function App() {
       {mobileOpen && <div className="scrim" onClick={() => setMobileOpen(false)} />}
 
       <main>
+        {tickerCandidates.length > 0 && (
+          <Ticker items={tickerItems} onConfigure={() => setTickerOpen(true)} />
+        )}
         <header className="topbar">
           <button className="menu-button" onClick={() => setMobileOpen(true)} aria-label="Abrir menu">
             <Menu />
@@ -219,6 +305,7 @@ export function App() {
                 portfolio="crypto"
                 assets={dashboard?.portfolios.crypto ?? []}
                 investableTotal={dashboard ? dashboard.totalBrl - dashboard.reserveBrl : 0}
+                usdBrl={dashboard?.usdBrl ?? 0}
                 onChanged={loadDashboard}
               />
             )}
@@ -240,6 +327,16 @@ export function App() {
           </div>
         )}
       </main>
+
+      {tickerOpen && (
+        <TickerSettings
+          candidates={tickerCandidates}
+          hidden={tickerHidden}
+          onToggle={toggleTickerAsset}
+          onShowAll={() => setTickerHidden(new Set())}
+          onClose={() => setTickerOpen(false)}
+        />
+      )}
     </div>
   );
 }
