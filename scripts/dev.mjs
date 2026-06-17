@@ -1,13 +1,17 @@
 import { spawn } from "node:child_process";
 
+const isWin = process.platform === "win32";
+const npm = isWin ? "npm.cmd" : "npm";
+
 const commands = [
   ["api", ["run", "dev", "-w", "@projeto41/api"]],
   ["web", ["run", "dev", "-w", "@projeto41/web"]]
 ];
 
 const children = commands.map(([name, args]) => {
-  const child = spawn("npm", args, {
-    detached: true,
+  const child = spawn(npm, args, {
+    detached: !isWin,
+    shell: isWin,
     stdio: ["inherit", "pipe", "pipe"]
   });
   child.stdout.on("data", (chunk) => process.stdout.write(`[${name}] ${chunk}`));
@@ -17,7 +21,9 @@ const children = commands.map(([name, args]) => {
 
 function stop(signal) {
   for (const child of children) {
-    if (child.pid) process.kill(-child.pid, signal);
+    if (!child.pid) continue;
+    if (isWin) spawn("taskkill", ["/pid", String(child.pid), "/T", "/F"]);
+    else process.kill(-child.pid, signal);
   }
 }
 

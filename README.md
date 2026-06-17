@@ -14,6 +14,8 @@ Os dados ficam num banco SQLite local e **nunca** são versionados.
 Destaques recentes — histórico completo e versões em
 [`CHANGELOG.md`](CHANGELOG.md).
 
+- Cotações de cripto pela CoinGecko, com busca de moedas por símbolo ou nome no
+  cadastro de operações.
 - Cadastro de operação flexível: preencha dois dos três campos e o terceiro é
   calculado automaticamente.
 - Carteira cripto: operação em USD ou BRL e opção de descontar a taxa Binance.
@@ -111,12 +113,13 @@ offline depois.
 | --- | --- | --- |
 | [brapi](https://brapi.dev) | Ações da B3 | `BRAPI_TOKEN` no `.env` (token gratuito) |
 | Banco Central (PTAX) | USD/BRL | automático, sem chave |
-| `CRYPTO_PRICE_URL` | Criptomoedas | opcional (veja `.env.example`) |
+| [CoinGecko](https://www.coingecko.com/en/api) | Criptomoedas | `COINGECKO_API_KEY` opcional (plano Demo) |
 | `TZ` | Horários das atualizações e snapshots | fuso IANA, como `America/Sao_Paulo` |
 
-Sem `BRAPI_TOKEN` as ações ficam sem cotação; sem `CRYPTO_PRICE_URL` as criptos
-ficam sem cotação. O restante do app continua funcionando normalmente, e você
-pode cadastrar operações de qualquer forma.
+Sem `BRAPI_TOKEN` as ações ficam sem cotação. As criptos usam o CoinGecko via
+API pública mesmo sem chave; `COINGECKO_API_KEY` (plano Demo) eleva o limite de
+requisições. O restante do app continua funcionando normalmente, e você pode
+cadastrar operações de qualquer forma.
 
 ## Dados e privacidade
 

@@ -1426,6 +1426,139 @@ main {
   width: 140px;
 }
 
+.crypto-search {
+  position: relative;
+}
+/* Campo de busca alinhado aos demais inputs do formulário, um pouco mais baixo. */
+.crypto-search-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--input-bg);
+  color: var(--text-faint);
+  transition: var(--transition);
+}
+.crypto-search-input:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.crypto-search-input input {
+  width: 100%;
+  padding: 9px 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  outline: none;
+}
+.crypto-search-input input:focus {
+  box-shadow: none;
+}
+.crypto-results {
+  position: absolute;
+  z-index: 70;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 5px;
+  list-style: none;
+  max-height: 236px;
+  overflow-y: auto;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  box-shadow: var(--shadow-pop);
+}
+.crypto-results li {
+  margin: 0;
+}
+.crypto-empty {
+  padding: 9px 10px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.crypto-results button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+}
+.crypto-results button.active,
+.crypto-results button:hover {
+  background: var(--accent-soft);
+}
+.crypto-results .avatar,
+.crypto-results .avatar-img,
+.crypto-pick .avatar,
+.crypto-pick .avatar-img {
+  width: 22px;
+  height: 22px;
+}
+.crypto-sym {
+  font-weight: 700;
+  font-size: 13px;
+}
+.crypto-name {
+  flex: 1;
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.crypto-rank {
+  flex: 0 0 auto;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-faint);
+  background: var(--surface-2);
+  padding: 1px 6px;
+  border-radius: 999px;
+}
+/* Estado selecionado em linha única (mais enxuto verticalmente). */
+.crypto-pick {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 8px 6px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border-strong);
+  background: var(--input-bg);
+}
+.crypto-pick-sym {
+  font-weight: 700;
+  font-size: 14px;
+}
+.crypto-pick-name {
+  flex: 1;
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.crypto-pick .icon-btn {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  line-height: 0;
+}
+
 .op-preview {
   display: flex;
   justify-content: space-between;

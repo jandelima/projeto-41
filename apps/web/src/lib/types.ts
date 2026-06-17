@@ -74,6 +74,13 @@ export type Contribution = {
   notes?: string;
 };
 
+export type CryptoSearchResult = {
+  id: string;
+  symbol: string;
+  name: string;
+  rank: number | null;
+};
+
 export type AllocationTarget = { category: string; weight: number };
 
 export type PlanningForm = {

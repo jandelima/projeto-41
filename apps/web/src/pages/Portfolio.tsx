@@ -1,6 +1,7 @@
 import { ArrowDown, ArrowUp, ChevronDown, ChevronUp, Coins, Pencil, Plus, Save, Sparkles, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
+import { CryptoAssetSearch } from "../components/CryptoAssetSearch.js";
 import { DateField } from "../components/datepicker.js";
 import { Drawer, useConfirm } from "../components/dialog.js";
 import {
@@ -21,7 +22,7 @@ import { api } from "../lib/api.js";
 import { currency as fmtCurrency, currencyRaw, decimal, longDate, money, percent } from "../lib/format.js";
 import { portfolioIconUrl } from "../lib/icons.js";
 import { useToast } from "../lib/toast.js";
-import type { Asset, Operation } from "../lib/types.js";
+import type { Asset, CryptoSearchResult, Operation } from "../lib/types.js";
 
 type SortKey = "asset" | "quantity" | "averagePrice" | "price" | "marketValueBrl" | "totalReturn";
 
@@ -267,6 +268,8 @@ function OperationDrawer({
 
   const [type, setType] = useState<"buy" | "sell">(initial?.type ?? "buy");
   const [asset, setAsset] = useState(initial?.asset ?? "");
+  const [slug, setSlug] = useState("");
+  const [assetName, setAssetName] = useState(initial?.asset ?? "");
   const [date, setDate] = useState(initial && initial.date !== "1900-01-01" ? initial.date : new Date().toISOString().slice(0, 10));
   const [entryCurrency, setEntryCurrency] = useState<"USD" | "BRL">("USD");
   const [useFee, setUseFee] = useState(false);
@@ -313,8 +316,12 @@ function OperationDrawer({
     event.preventDefault();
     let quantity = Number(fields.qty);
     let total = Number(fields.total);
-    if (!asset.trim() || !(quantity > 0) || !Number.isFinite(total) || total < 0) {
-      toast.notify("Preencha o ativo e ao menos dois dos três valores", "error");
+    if (!asset.trim()) {
+      toast.notify(isCrypto ? "Selecione um ativo na busca" : "Preencha o ativo", "error");
+      return;
+    }
+    if (!(quantity > 0) || !Number.isFinite(total) || total < 0) {
+      toast.notify("Preencha ao menos dois dos três valores", "error");
       return;
     }
     // Operação digitada em BRL é convertida para USD antes de gravar.
@@ -341,7 +348,8 @@ function OperationDrawer({
         quantity,
         total,
         currency: storedCode,
-        notes: initial?.notes ?? ""
+        notes: initial?.notes ?? "",
+        ...(isCrypto && slug ? { slug, name: assetName } : {})
       };
       await api(initial ? `/operations/${initial.id}` : "/operations", {
         method: initial ? "PUT" : "POST",
@@ -390,19 +398,38 @@ function OperationDrawer({
             ]}
           />
         </Field>
-        <Field label="Ativo">
-          <input
-            list="asset-options"
-            value={asset}
-            onChange={(event) => setAsset(event.target.value.toUpperCase())}
-            placeholder={isCrypto ? "BTC" : "PETR4"}
-            autoFocus
-          />
-          <datalist id="asset-options">
-            {assetNames.map((name) => (
-              <option key={name} value={name} />
-            ))}
-          </datalist>
+        <Field label="Ativo" hint={isCrypto ? "Busca na CoinGecko por símbolo ou nome." : undefined}>
+          {isCrypto ? (
+            <CryptoAssetSearch
+              selected={asset ? { symbol: asset, name: assetName || asset } : null}
+              onSelect={(result: CryptoSearchResult) => {
+                setAsset(result.symbol);
+                setSlug(result.id);
+                setAssetName(result.name);
+              }}
+              onClear={() => {
+                setAsset("");
+                setSlug("");
+                setAssetName("");
+              }}
+              autoFocus
+            />
+          ) : (
+            <>
+              <input
+                list="asset-options"
+                value={asset}
+                onChange={(event) => setAsset(event.target.value.toUpperCase())}
+                placeholder="PETR4"
+                autoFocus
+              />
+              <datalist id="asset-options">
+                {assetNames.map((name) => (
+                  <option key={name} value={name} />
+                ))}
+              </datalist>
+            </>
+          )}
         </Field>
         <Field label="Data">
           <DateField value={date} onChange={setDate} />

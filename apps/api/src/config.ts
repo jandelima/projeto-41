@@ -22,7 +22,7 @@ export function loadServerConfig(
     databaseUrl: environment.DATABASE_URL ?? "./data/projeto41.sqlite",
     port: Number(environment.PORT ?? 3001),
     demoMode: environment.DEMO_MODE === "true",
-    cryptoUrl: environment.CRYPTO_PRICE_URL ?? "",
+    coingeckoApiKey: environment.COINGECKO_API_KEY ?? "",
     brapiToken: environment.BRAPI_TOKEN ?? "",
     timezone: environment.TZ ?? "America/Fortaleza"
   };
