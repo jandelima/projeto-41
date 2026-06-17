@@ -14,6 +14,8 @@ Os dados ficam num banco SQLite local e **nunca** são versionados.
 Destaques recentes — histórico completo e versões em
 [`CHANGELOG.md`](CHANGELOG.md).
 
+- Cotações de cripto pela CoinGecko, com busca de moedas por símbolo ou nome no
+  cadastro de operações.
 - Cadastro de operação flexível: preencha dois dos três campos e o terceiro é
   calculado automaticamente.
 - Carteira cripto: operação em USD ou BRL e opção de descontar a taxa Binance.

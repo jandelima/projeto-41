@@ -11,6 +11,19 @@ um novo `[Unreleased]` vazio no topo.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-06-16
+
+### Added
+
+- Busca de criptomoedas por símbolo ou nome (CoinGecko) ao cadastrar operações,
+  associando a moeda ao identificador correto usado na cotação.
+
+### Changed
+
+- Cotações de cripto passam a vir da CoinGecko, substituindo o provedor anterior
+  configurado por `CRYPTO_PRICE_URL`. Use `COINGECKO_API_KEY` (plano Demo,
+  opcional) para elevar o limite de requisições.
+
 ## [0.2.0] - 2026-06-16
 
 ### Added
