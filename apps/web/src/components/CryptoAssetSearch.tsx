@@ -58,10 +58,8 @@ export function CryptoAssetSearch({
     return (
       <div className="crypto-pick">
         <AssetIcon src={portfolioIconUrl("crypto", selected.symbol)} label={selected.symbol} />
-        <div className="crypto-pick-text">
-          <strong>{selected.symbol}</strong>
-          <small>{selected.name}</small>
-        </div>
+        <span className="crypto-pick-sym">{selected.symbol}</span>
+        <span className="crypto-pick-name">{selected.name}</span>
         <IconButton icon={X} label="Trocar ativo" onClick={onClear} />
       </div>
     );
@@ -93,7 +91,7 @@ export function CryptoAssetSearch({
 
   return (
     <div className="crypto-search">
-      <div className="search-input crypto-search-input">
+      <div className="crypto-search-input">
         <Search size={15} />
         <input
           value={query}
