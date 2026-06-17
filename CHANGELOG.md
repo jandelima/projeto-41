@@ -11,6 +11,18 @@ um novo `[Unreleased]` vazio no topo.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-06-17
+
+### Added
+
+- Página de Alocação: gráfico de rosca da meta ao lado dos controles, redesenhado
+  em tempo real conforme você ajusta a meta de cada classe.
+
+### Changed
+
+- Rótulos do gráfico de rosca deixam de se sobrepor: os que ficariam grudados são
+  reposicionados verticalmente e mantidos dentro da área do gráfico.
+
 ## [0.4.0] - 2026-06-17
 
 ### Added

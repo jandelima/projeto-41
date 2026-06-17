@@ -14,6 +14,8 @@ Os dados ficam num banco SQLite local e **nunca** são versionados.
 Destaques recentes — histórico completo e versões em
 [`CHANGELOG.md`](CHANGELOG.md).
 
+- Página de Alocação com gráfico de rosca da meta ao lado dos controles,
+  atualizando em tempo real conforme você ajusta cada classe.
 - Exportação das operações de cripto em CSV direto pela carteira, com uma coluna
   de moeda por operação.
 - Cotações de cripto pela CoinGecko, com busca de moedas por símbolo ou nome no
