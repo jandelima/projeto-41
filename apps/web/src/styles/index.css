@@ -1453,6 +1453,9 @@ main {
   color: var(--text);
   outline: none;
 }
+.crypto-search-input input:focus {
+  box-shadow: none;
+}
 .crypto-results {
   position: absolute;
   z-index: 70;
@@ -1547,9 +1550,13 @@ main {
   white-space: nowrap;
 }
 .crypto-pick .icon-btn {
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  line-height: 0;
 }
 
 .op-preview {
