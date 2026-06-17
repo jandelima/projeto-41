@@ -14,6 +14,8 @@ Os dados ficam num banco SQLite local e **nunca** são versionados.
 Destaques recentes — histórico completo e versões em
 [`CHANGELOG.md`](CHANGELOG.md).
 
+- Exportação das operações de cripto em CSV direto pela carteira, com uma coluna
+  de moeda por operação.
 - Cotações de cripto pela CoinGecko, com busca de moedas por símbolo ou nome no
   cadastro de operações.
 - Cadastro de operação flexível: preencha dois dos três campos e o terceiro é
@@ -127,6 +129,8 @@ cadastrar operações de qualquer forma.
 - O servidor escuta apenas em `127.0.0.1`; nada é exposto para a rede.
 - `Projeto 41.xlsx`, `.env`, banco e backups nunca são versionados.
 - Exportação manual dos dados: `GET http://127.0.0.1:3001/api/export`.
+- Exportação das operações de cripto em CSV pelo botão "Exportar CSV" na carteira
+  (`GET http://127.0.0.1:3001/api/export/operations.csv`).
 
 ## Modo demonstração
 

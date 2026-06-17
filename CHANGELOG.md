@@ -11,6 +11,19 @@ um novo `[Unreleased]` vazio no topo.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-06-17
+
+### Added
+
+- Exportação das operações de cripto em CSV pela carteira (botão "Exportar CSV"
+  e endpoint `GET /api/export/operations.csv`), com uma coluna de moeda por
+  operação.
+
+### Changed
+
+- Botão "Exportar CSV" com tratamento discreto: plano por padrão, ganhando fundo
+  e borda apenas no hover, com microinteração no ícone de download.
+
 ## [0.3.0] - 2026-06-16
 
 ### Added
