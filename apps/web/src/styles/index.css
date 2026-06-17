@@ -593,6 +593,11 @@ main {
   color: var(--text-muted);
   font-size: 13px;
 }
+.section-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
 
 /* ---------- Buttons ---------- */
 .btn {
@@ -625,6 +630,24 @@ main {
 }
 .btn-ghost:hover {
   color: var(--text);
+}
+.export-btn {
+  background: transparent;
+  border-color: transparent;
+  font-weight: 500;
+}
+.export-btn svg {
+  transition: transform 0.2s ease;
+}
+.export-btn:hover {
+  background: var(--surface-3);
+  border-color: var(--border-strong);
+}
+.export-btn:hover svg {
+  transform: translateY(2px);
+}
+.export-btn:active svg {
+  transform: translateY(3px);
 }
 .btn-danger {
   color: var(--negative);

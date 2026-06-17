@@ -59,6 +59,39 @@ describe("API", () => {
     await app.close();
   });
 
+  it("exports crypto operations as CSV", async () => {
+    db = createDatabase(":memory:");
+    db.operations.create({
+      portfolio: "crypto",
+      type: "buy",
+      asset: "BTC",
+      date: "2026-06-09",
+      quantity: 0.5,
+      total: 32500,
+      currency: "USD"
+    });
+    db.operations.create({
+      portfolio: "b3",
+      type: "buy",
+      asset: "PETR4",
+      date: "2026-06-09",
+      quantity: 10,
+      total: 400,
+      currency: "BRL"
+    });
+    const app = buildApp({ db, priceService: { runAll: async () => [] } });
+
+    const response = await app.inject({ method: "GET", url: "/api/export/operations.csv" });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers["content-type"]).toContain("text/csv");
+    expect(response.body.split("\r\n")).toEqual([
+      "asset,date,type,quantity,amount,unit_price,currency",
+      "BTC,2026-06-09,buy,0.5,32500,65000,USD"
+    ]);
+    await app.close();
+  });
+
   it("auto-fetches the price of a new crypto asset on creation", async () => {
     db = createDatabase(":memory:");
     const fetched: string[] = [];
