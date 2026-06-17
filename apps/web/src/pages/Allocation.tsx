@@ -1,5 +1,6 @@
 import { Target } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Donut } from "../components/charts.js";
 import { Empty, MiniStat, Panel, SectionHeading } from "../components/ui.js";
 import { api } from "../lib/api.js";
 import { categoryLabel, money, percent } from "../lib/format.js";
@@ -55,6 +56,19 @@ export function AllocationPage({ dashboard }: { dashboard: Dashboard }) {
   const totalWeight = targets.reduce((sum, target) => sum + target.weight, 0);
   const weightOff = Math.abs(totalWeight - 1) > 0.0005;
 
+  // Donut da meta que está sendo montada — redesenha ao vivo conforme os sliders.
+  const targetSlices = useMemo(
+    () =>
+      rows
+        .filter((row) => row.weight > 0)
+        .map((row) => ({
+          key: row.category,
+          label: categoryLabel(row.category),
+          value: row.weight
+        })),
+    [rows]
+  );
+
   function setWeight(category: string, weight: number) {
     setTargets((current) =>
       current.map((target) => (target.category === category ? { ...target, weight } : target))
@@ -84,43 +98,51 @@ export function AllocationPage({ dashboard }: { dashboard: Dashboard }) {
       </div>
 
       <Panel title="Real x ideal" subtitle="Arraste o marcador para definir a meta de cada classe">
-        <div className="allocation-list">
-          {rows.map((row) => (
-            <div className="allocation-row" key={row.category}>
-              <div className="allocation-name">
-                <strong>{categoryLabel(row.category)}</strong>
-                <span>
-                  {money(row.actual)} · {percent(row.actualWeight)} atual
-                </span>
-              </div>
-              <div className="alloc-slider">
-                <div className="allocation-track">
-                  <div
-                    className="allocation-fill"
-                    style={{ width: `${Math.min(100, row.actualWeight * 100)}%` }}
+        <div className="allocation-split">
+          <div className="allocation-list">
+            {rows.map((row) => (
+              <div className="allocation-row" key={row.category}>
+                <div className="allocation-name">
+                  <strong>{categoryLabel(row.category)}</strong>
+                  <span>
+                    {money(row.actual)} · {percent(row.actualWeight)} atual
+                  </span>
+                </div>
+                <div className="alloc-slider">
+                  <div className="allocation-track">
+                    <div
+                      className="allocation-fill"
+                      style={{ width: `${Math.min(100, row.actualWeight * 100)}%` }}
+                    />
+                  </div>
+                  <input
+                    className="alloc-range"
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={0.5}
+                    value={+(row.weight * 100).toFixed(1)}
+                    aria-label={`Meta de ${categoryLabel(row.category)}`}
+                    onChange={(event) => setWeight(row.category, Number(event.target.value) / 100)}
+                    onPointerUp={(event) =>
+                      void commit(row.category, Number((event.target as HTMLInputElement).value) / 100)
+                    }
+                    onKeyUp={(event) =>
+                      void commit(row.category, Number((event.target as HTMLInputElement).value) / 100)
+                    }
                   />
                 </div>
-                <input
-                  className="alloc-range"
-                  type="range"
-                  min={0}
-                  max={100}
-                  step={0.5}
-                  value={+(row.weight * 100).toFixed(1)}
-                  aria-label={`Meta de ${categoryLabel(row.category)}`}
-                  onChange={(event) => setWeight(row.category, Number(event.target.value) / 100)}
-                  onPointerUp={(event) =>
-                    void commit(row.category, Number((event.target as HTMLInputElement).value) / 100)
-                  }
-                  onKeyUp={(event) =>
-                    void commit(row.category, Number((event.target as HTMLInputElement).value) / 100)
-                  }
-                />
+                <strong className="alloc-target-value">{oneDecimal(row.weight)}</strong>
               </div>
-              <strong className="alloc-target-value">{oneDecimal(row.weight)}</strong>
-            </div>
-          ))}
-          {!rows.length && <Empty icon={Target} text="Nenhuma meta de alocação definida." />}
+            ))}
+            {!rows.length && <Empty icon={Target} text="Nenhuma meta de alocação definida." />}
+          </div>
+          {rows.length > 0 && (
+            <aside className="allocation-chart">
+              <span className="allocation-chart-label">Meta em construção</span>
+              <Donut data={targetSlices} height={340} />
+            </aside>
+          )}
         </div>
       </Panel>
     </div>

@@ -2182,6 +2182,25 @@ main {
 }
 
 /* ---------- Allocation ---------- */
+.allocation-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(420px, 520px);
+  gap: 28px;
+  align-items: center;
+}
+.allocation-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding-left: 28px;
+  border-left: 1px solid var(--border);
+}
+.allocation-chart-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
 .allocation-list {
   display: flex;
   flex-direction: column;
@@ -2455,6 +2474,16 @@ main {
   }
   .position-groups {
     grid-template-columns: 1fr;
+  }
+  .allocation-split {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .allocation-chart {
+    padding-left: 0;
+    padding-top: 16px;
+    border-left: 0;
+    border-top: 1px solid var(--border);
   }
 }
 @media (max-width: 820px) {

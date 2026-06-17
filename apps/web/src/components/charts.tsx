@@ -1,4 +1,4 @@
-import { useId, useMemo } from "react";
+import { useId, useMemo, useRef } from "react";
 import {
   Area,
   AreaChart,
@@ -145,23 +145,83 @@ export function DualAreaTrend({
 
 export function Donut({ data, height = 280 }: { data: { key: string; label: string; value: number }[]; height?: number }) {
   const { colors } = useTheme();
+  const layoutCache = useRef<{ key: string; map: Map<number, LabelSpot> }>({ key: "", map: new Map() });
 
-  const renderLabel = ({ cx, cy, midAngle, outerRadius, percent, index, payload }: any) => {
+  // Ângulo central de cada fatia (sem o paddingAngle, suficiente para posicionar rótulos).
+  const midAngles = useMemo(() => {
+    const total = data.reduce((sum, item) => sum + item.value, 0) || 1;
+    let acc = 0;
+    return data.map((item) => {
+      const start = acc / total;
+      acc += item.value;
+      return 360 * (start + item.value / total / 2);
+    });
+  }, [data]);
+
+  // Resolve a sobreposição: empurra verticalmente os rótulos que ficariam grudados.
+  function buildLayout(cx: number, cy: number, outerRadius: number): Map<number, LabelSpot> {
+    const key = `${cx}|${cy}|${outerRadius}|${midAngles.map((a) => a.toFixed(1)).join(",")}`;
+    if (layoutCache.current.key === key) return layoutCache.current.map;
+
     const RAD = Math.PI / 180;
-    const cos = Math.cos(-midAngle * RAD);
-    const sin = Math.sin(-midAngle * RAD);
-    const isRight = cos >= 0;
-    const sx = cx + outerRadius * cos;
-    const sy = cy + outerRadius * sin;
-    const endX = cx + (isRight ? 1 : -1) * (outerRadius + 32);
-    const textX = endX + (isRight ? 7 : -7);
+    const GAP = 30;
+    const minY = 8;
+    const maxY = cy * 2 - 8;
+
+    const spots: LabelSpot[] = midAngles.map((mid, index) => {
+      const cos = Math.cos(-mid * RAD);
+      const sin = Math.sin(-mid * RAD);
+      const isRight = cos >= 0;
+      return {
+        index,
+        isRight,
+        sx: cx + outerRadius * cos,
+        sy: cy + outerRadius * sin,
+        kinkX: cx + (isRight ? 1 : -1) * (outerRadius + 10),
+        endX: cx + (isRight ? 1 : -1) * (outerRadius + 26),
+        y: cy + outerRadius * sin
+      };
+    });
+
+    for (const side of [true, false]) {
+      const group = spots.filter((spot) => spot.isRight === side).sort((a, b) => a.y - b.y);
+      for (let i = 1; i < group.length; i += 1) {
+        const floor = group[i - 1]!.y + GAP;
+        if (group[i]!.y < floor) group[i]!.y = floor;
+      }
+      const last = group[group.length - 1];
+      if (last && last.y > maxY) {
+        last.y = maxY;
+        for (let i = group.length - 2; i >= 0; i -= 1) {
+          const ceil = group[i + 1]!.y - GAP;
+          if (group[i]!.y > ceil) group[i]!.y = ceil;
+        }
+      }
+      const first = group[0];
+      if (first && first.y < minY) first.y = minY;
+    }
+
+    const map = new Map(spots.map((spot) => [spot.index, spot]));
+    layoutCache.current = { key, map };
+    return map;
+  }
+
+  const renderLabel = ({ cx, cy, outerRadius, percent, index, payload }: any) => {
+    const spot = buildLayout(cx, cy, outerRadius).get(index);
+    if (!spot) return <g />;
+    const textX = spot.endX + (spot.isRight ? 7 : -7);
     const color = colors.series[index % colors.series.length];
     const pct = `${(percent * 100).toFixed(1).replace(".", ",")}%`;
     return (
       <g>
-        <polyline points={`${sx},${sy} ${endX},${sy}`} stroke={color} strokeWidth={1.4} fill="none" />
-        <circle cx={endX} cy={sy} r={1.8} fill={color} />
-        <text x={textX} y={sy} textAnchor={isRight ? "start" : "end"} dominantBaseline="central">
+        <polyline
+          points={`${spot.sx},${spot.sy} ${spot.kinkX},${spot.sy} ${spot.endX},${spot.y}`}
+          stroke={color}
+          strokeWidth={1.4}
+          fill="none"
+        />
+        <circle cx={spot.endX} cy={spot.y} r={1.8} fill={color} />
+        <text x={textX} y={spot.y} textAnchor={spot.isRight ? "start" : "end"} dominantBaseline="central">
           <tspan x={textX} dy="-0.35em" fill="var(--text)" fontSize={12.5} fontWeight={600}>
             {payload.label}
           </tspan>
@@ -208,6 +268,16 @@ export function Donut({ data, height = 280 }: { data: { key: string; label: stri
     </div>
   );
 }
+
+type LabelSpot = {
+  index: number;
+  isRight: boolean;
+  sx: number;
+  sy: number;
+  kinkX: number;
+  endX: number;
+  y: number;
+};
 
 export function seriesColor(index: number, series: string[]) {
   return series[index % series.length];
