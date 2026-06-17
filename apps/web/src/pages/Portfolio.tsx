@@ -117,7 +117,7 @@ export function PortfolioPage({
     <div className="portfolio">
       <SectionHeading title={title} subtitle={subtitle}>
         {isCrypto && (
-          <Button variant="ghost" icon={Download} onClick={exportOperations}>
+          <Button variant="ghost" className="export-btn" icon={Download} onClick={exportOperations}>
             Exportar CSV
           </Button>
         )}
