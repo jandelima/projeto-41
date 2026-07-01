@@ -1,6 +1,7 @@
 import { ArrowDown, ArrowUp, ChevronDown, ChevronUp, Coins, Download, Pencil, Plus, Save, Sparkles, Trash2, Upload } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
+import { B3AssetSearch } from "../components/B3AssetSearch.js";
 import { CryptoAssetSearch } from "../components/CryptoAssetSearch.js";
 import { DateField } from "../components/datepicker.js";
 import { Drawer, useConfirm } from "../components/dialog.js";
@@ -77,8 +78,6 @@ export function PortfolioPage({
       return ((av as number) - (bv as number)) * sort.dir;
     });
   }, [held, search, sort]);
-
-  const assetNames = useMemo(() => [...new Set(assets.map((asset) => asset.asset))], [assets]);
 
   function toggleSort(key: SortKey) {
     setSort((current) =>
@@ -306,7 +305,6 @@ export function PortfolioPage({
         <OperationDrawer
           portfolio={portfolio}
           initial={editing}
-          assetNames={assetNames}
           usdBrl={usdBrl}
           onClose={() => { setDrawer(false); setEditing(null); }}
           onSaved={async () => {
@@ -324,14 +322,12 @@ export function PortfolioPage({
 function OperationDrawer({
   portfolio,
   initial,
-  assetNames,
   usdBrl,
   onClose,
   onSaved
 }: {
   portfolio: "crypto" | "b3";
   initial: Operation | null;
-  assetNames: string[];
   usdBrl: number;
   onClose: () => void;
   onSaved: () => void;
@@ -475,7 +471,10 @@ function OperationDrawer({
             ]}
           />
         </Field>
-        <Field label="Ativo" hint={isCrypto ? "Busca na CoinGecko por símbolo ou nome." : undefined}>
+        <Field
+          label="Ativo"
+          hint={isCrypto ? "Busca na CoinGecko por símbolo ou nome." : "Busca na B3 por ticker ou empresa."}
+        >
           {isCrypto ? (
             <CryptoAssetSearch
               selected={asset ? { symbol: asset, name: assetName || asset } : null}
@@ -492,20 +491,19 @@ function OperationDrawer({
               autoFocus
             />
           ) : (
-            <>
-              <input
-                list="asset-options"
-                value={asset}
-                onChange={(event) => setAsset(event.target.value.toUpperCase())}
-                placeholder="PETR4"
-                autoFocus
-              />
-              <datalist id="asset-options">
-                {assetNames.map((name) => (
-                  <option key={name} value={name} />
-                ))}
-              </datalist>
-            </>
+            <B3AssetSearch
+              selected={asset ? { symbol: asset, name: assetName || asset } : null}
+              onSelect={(result) => {
+                setAsset(result.symbol);
+                setAssetName(result.name);
+                if (result.price > 0) editField("unit", String(result.price));
+              }}
+              onClear={() => {
+                setAsset("");
+                setAssetName("");
+              }}
+              autoFocus
+            />
           )}
         </Field>
         <Field label="Data">

@@ -13,11 +13,13 @@ import { buildOperationsCsv, parseOperationsCsv } from "./export/operations-csv.
 import { buildDashboard, buildPortfolios } from "./services/portfolio-service.js";
 
 type CryptoSearchHit = { id: string; symbol: string; name: string; rank: number | null };
+type B3SearchHit = { symbol: string; name: string; price: number; currency: string };
 
 type PriceService = {
   runAll(): Promise<unknown>;
   ensureCryptoPrice?(symbol: string): Promise<boolean>;
   searchCrypto?(query: string): Promise<CryptoSearchHit[]>;
+  searchB3?(query: string): Promise<B3SearchHit[]>;
 };
 
 export function buildApp({
@@ -102,6 +104,11 @@ export function buildApp({
     const { q } = z.object({ q: z.string().trim().min(1).max(80) }).parse(request.query);
     if (!priceService.searchCrypto) return [];
     return priceService.searchCrypto(q);
+  });
+  app.get("/api/b3/search", async (request) => {
+    const { q } = z.object({ q: z.string().trim().min(1).max(80) }).parse(request.query);
+    if (!priceService.searchB3) return [];
+    return priceService.searchB3(q);
   });
   app.post("/api/operations", async (request, reply) => {
     const operation = operationSchema.parse(request.body);

@@ -83,6 +83,45 @@ export async function searchCryptoAssets(
     }));
 }
 
+export type B3SearchResult = {
+  symbol: string;
+  name: string;
+  price: number;
+  currency: "BRL";
+};
+
+export async function searchB3Assets(
+  query: string,
+  token: string,
+  fetcher: Fetcher = fetch
+): Promise<B3SearchResult[]> {
+  const term = query.trim();
+  if (!term) return [];
+
+  const endpoint = new URL("https://brapi.dev/api/quote/list");
+  endpoint.searchParams.set("search", term);
+  endpoint.searchParams.set("limit", "15");
+  endpoint.searchParams.set("sortBy", "volume");
+  endpoint.searchParams.set("sortOrder", "desc");
+  if (token) endpoint.searchParams.set("token", token);
+
+  const response = await withTimeout(fetcher, endpoint);
+  if (!response.ok) throw new Error(`brapi search returned ${response.status}`);
+  const data = (await response.json()) as {
+    stocks?: { stock?: string; name?: string; close?: number }[];
+  };
+
+  return (data.stocks ?? [])
+    .filter((item): item is { stock: string; name?: string; close?: number } => Boolean(item.stock))
+    .slice(0, 15)
+    .map((item) => ({
+      symbol: item.stock.toUpperCase(),
+      name: item.name ?? item.stock,
+      price: typeof item.close === "number" && item.close > 0 ? item.close : 0,
+      currency: "BRL" as const
+    }));
+}
+
 export async function fetchB3Price(
   symbol: string,
   token: string,

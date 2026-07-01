@@ -3,6 +3,7 @@ import {
   fetchB3Price,
   fetchCryptoPrices,
   fetchUsdBrl,
+  searchB3Assets,
   searchCryptoAssets
 } from "./providers.js";
 
@@ -128,12 +129,17 @@ export function createPriceService(
     return searchCryptoAssets(query, options.coingeckoApiKey, fetcher);
   }
 
+  async function searchB3(query: string) {
+    return searchB3Assets(query, options.brapiToken, fetcher);
+  }
+
   return {
     runCrypto,
     runB3,
     runCurrency,
     ensureCryptoPrice,
     searchCrypto,
+    searchB3,
     runAll: () => Promise.all([runCrypto(), runB3(), runCurrency()])
   };
 }
