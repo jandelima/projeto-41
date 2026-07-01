@@ -3,6 +3,7 @@ import {
   fetchB3Price,
   fetchCryptoPrices,
   fetchUsdBrl,
+  searchB3Assets,
   searchCryptoAssets
 } from "./providers.js";
 
@@ -60,6 +61,35 @@ describe("price providers", () => {
 
     expect(attempts).toBe(2);
     expect(price).toMatchObject({ symbol: "BBAS3", price: 25.4 });
+  });
+
+  it("maps the brapi quote/list response to B3 ticker matches with price", async () => {
+    const fetcher = async (input: string | URL) => {
+      expect(String(input)).toContain("search=petr");
+      return Response.json({
+        stocks: [
+          { stock: "PETR4", name: "PETROLEO BRASILEIRO S.A. PETROBRAS", close: 37.8 },
+          { stock: "PETR3", name: "PETROLEO BRASILEIRO S.A. PETROBRAS", close: 41.78 },
+          { stock: "", name: "sem ticker" }
+        ]
+      });
+    };
+    const results = await searchB3Assets("petr", "token", fetcher as typeof fetch);
+    expect(results).toEqual([
+      { symbol: "PETR4", name: "PETROLEO BRASILEIRO S.A. PETROBRAS", price: 37.8, currency: "BRL" },
+      { symbol: "PETR3", name: "PETROLEO BRASILEIRO S.A. PETROBRAS", price: 41.78, currency: "BRL" }
+    ]);
+  });
+
+  it("returns no B3 matches for an empty query without calling the API", async () => {
+    let called = false;
+    const fetcher = async () => {
+      called = true;
+      return Response.json({});
+    };
+    const results = await searchB3Assets("   ", "token", fetcher as typeof fetch);
+    expect(results).toEqual([]);
+    expect(called).toBe(false);
   });
 
   it("maps the CoinGecko search response to symbol/id matches", async () => {

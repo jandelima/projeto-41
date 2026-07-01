@@ -218,6 +218,27 @@ describe("API", () => {
     await app.close();
   });
 
+  it("searches B3 assets through the price service", async () => {
+    db = createDatabase(":memory:");
+    const app = buildApp({
+      db,
+      priceService: {
+        runAll: async () => [],
+        searchB3: async (query: string) => [
+          { symbol: "PETR4", name: `Petrobras (${query})`, price: 37.8, currency: "BRL" }
+        ]
+      }
+    });
+
+    const response = await app.inject({ method: "GET", url: "/api/b3/search?q=petr" });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual([
+      { symbol: "PETR4", name: "Petrobras (petr)", price: 37.8, currency: "BRL" }
+    ]);
+    await app.close();
+  });
+
   it("remembers the CoinGecko slug picked for a new crypto operation", async () => {
     db = createDatabase(":memory:");
     const app = buildApp({

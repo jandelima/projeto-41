@@ -81,6 +81,13 @@ export type CryptoSearchResult = {
   rank: number | null;
 };
 
+export type B3SearchResult = {
+  symbol: string;
+  name: string;
+  price: number;
+  currency: string;
+};
+
 export type AllocationTarget = { category: string; weight: number };
 
 export type PlanningForm = {
