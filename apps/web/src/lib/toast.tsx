@@ -1,17 +1,18 @@
-import { CheckCircle2, Info, X, XCircle } from "lucide-react";
+import { CheckCircle2, Info, Loader2, X, XCircle } from "lucide-react";
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
-type ToastTone = "success" | "error" | "info";
+type ToastTone = "success" | "error" | "info" | "loading";
 type Toast = { id: number; tone: ToastTone; message: string };
 
 type ToastContextValue = {
-  notify: (message: string, tone?: ToastTone) => void;
+  notify: (message: string, tone?: ToastTone) => number;
+  dismiss: (id: number) => void;
 };
 
 const ToastContext = createContext<ToastContextValue | null>(null);
 
-const icons = { success: CheckCircle2, error: XCircle, info: Info };
+const icons = { success: CheckCircle2, error: XCircle, info: Info, loading: Loader2 };
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -25,12 +26,14 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     (message: string, tone: ToastTone = "success") => {
       const id = (counter.current += 1);
       setToasts((current) => [...current, { id, tone, message }]);
-      window.setTimeout(() => dismiss(id), 4200);
+      // Loading toasts stay until the caller dismisses them.
+      if (tone !== "loading") window.setTimeout(() => dismiss(id), 4200);
+      return id;
     },
     [dismiss]
   );
 
-  const value = useMemo(() => ({ notify }), [notify]);
+  const value = useMemo(() => ({ notify, dismiss }), [notify, dismiss]);
 
   return (
     <ToastContext.Provider value={value}>
@@ -38,13 +41,16 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       <div className="toast-stack" role="status" aria-live="polite">
         {toasts.map((toast) => {
           const Icon = icons[toast.tone];
+          const loading = toast.tone === "loading";
           return (
             <div key={toast.id} className={`toast toast-${toast.tone}`}>
-              <Icon size={18} />
+              <Icon size={18} className={loading ? "spin" : undefined} />
               <span>{toast.message}</span>
-              <button onClick={() => dismiss(toast.id)} aria-label="Fechar">
-                <X size={15} />
-              </button>
+              {!loading && (
+                <button onClick={() => dismiss(toast.id)} aria-label="Fechar">
+                  <X size={15} />
+                </button>
+              )}
             </div>
           );
         })}

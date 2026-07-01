@@ -9,7 +9,7 @@ import {
 import type { AppDatabase } from "@projeto41/db";
 import { z } from "zod";
 import type { IconService } from "./icons/icon-service.js";
-import { buildOperationsCsv } from "./export/operations-csv.js";
+import { buildOperationsCsv, parseOperationsCsv } from "./export/operations-csv.js";
 import { buildDashboard, buildPortfolios } from "./services/portfolio-service.js";
 
 type CryptoSearchHit = { id: string; symbol: string; name: string; rank: number | null };
@@ -33,6 +33,9 @@ export function buildApp({
 }) {
   const app = Fastify({ logger: false });
   app.register(cors, { origin: /^http:\/\/127\.0\.0\.1(?::\d+)?$/ });
+  app.addContentTypeParser("text/csv", { parseAs: "string" }, (_request, body, done) => {
+    done(null, body);
+  });
   if (webRoot) {
     app.register(staticPlugin, {
       root: webRoot,
@@ -210,6 +213,21 @@ export function buildApp({
     reply.header("Content-Type", "text/csv; charset=utf-8");
     reply.header("Content-Disposition", `attachment; filename="operacoes-cripto.csv"`);
     return buildOperationsCsv(operations);
+  });
+  app.post("/api/import/operations.csv", async (request, reply) => {
+    const text = typeof request.body === "string" ? request.body : "";
+    const operations = parseOperationsCsv(text).map((row) => operationSchema.parse(row));
+    if (operations.length === 0) {
+      return reply.status(400).send({ error: "Nenhuma operação encontrada no CSV" });
+    }
+    for (const operation of operations) db.operations.create(operation);
+    if (priceService.ensureCryptoPrice) {
+      const assets = [...new Set(operations.map((operation) => operation.asset))];
+      for (const asset of assets) await priceService.ensureCryptoPrice(asset);
+    }
+    return reply
+      .status(201)
+      .send({ imported: operations.length, portfolios: buildPortfolios(db) });
   });
   app.get("/api/export", async (_request, reply) => {
     reply.header("Content-Disposition", `attachment; filename="projeto41-export.json"`);

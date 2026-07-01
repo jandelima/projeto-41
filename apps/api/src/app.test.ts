@@ -92,6 +92,62 @@ describe("API", () => {
     await app.close();
   });
 
+  it("imports crypto operations from CSV in the export format", async () => {
+    db = createDatabase(":memory:");
+    const fetched: string[] = [];
+    const app = buildApp({
+      db,
+      priceService: {
+        runAll: async () => [],
+        ensureCryptoPrice: async (symbol: string) => {
+          fetched.push(symbol);
+          return true;
+        }
+      }
+    });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/import/operations.csv",
+      headers: { "content-type": "text/csv" },
+      payload: [
+        "asset,date,type,quantity,amount,unit_price,currency",
+        "BTC,2026-06-09,buy,0.5,32500,65000,USD",
+        "eth,2026-06-10,sell,2,7000,3500,USD"
+      ].join("\r\n")
+    });
+
+    expect(response.statusCode).toBe(201);
+    expect(response.json().imported).toBe(2);
+    expect(fetched).toEqual(["BTC", "ETH"]);
+
+    const operations = db.operations.list("crypto");
+    expect(operations).toHaveLength(2);
+    expect(operations).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ asset: "BTC", type: "buy", quantity: 0.5, total: 32500 }),
+        expect.objectContaining({ asset: "ETH", type: "sell", quantity: 2, total: 7000 })
+      ])
+    );
+    await app.close();
+  });
+
+  it("rejects a CSV import with invalid rows without inserting anything", async () => {
+    db = createDatabase(":memory:");
+    const app = buildApp({ db, priceService: { runAll: async () => [] } });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/import/operations.csv",
+      headers: { "content-type": "text/csv" },
+      payload: "asset,date,type,quantity,amount,unit_price,currency\nBTC,2026-06-09,buy,-1,32500,65000,USD"
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(db.operations.list("crypto")).toHaveLength(0);
+    await app.close();
+  });
+
   it("auto-fetches the price of a new crypto asset on creation", async () => {
     db = createDatabase(":memory:");
     const fetched: string[] = [];

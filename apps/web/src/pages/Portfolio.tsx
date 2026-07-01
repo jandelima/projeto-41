@@ -1,5 +1,5 @@
-import { ArrowDown, ArrowUp, ChevronDown, ChevronUp, Coins, Download, Pencil, Plus, Save, Sparkles, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { ArrowDown, ArrowUp, ChevronDown, ChevronUp, Coins, Download, Pencil, Plus, Save, Sparkles, Trash2, Upload } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { CryptoAssetSearch } from "../components/CryptoAssetSearch.js";
 import { DateField } from "../components/datepicker.js";
@@ -53,6 +53,7 @@ export function PortfolioPage({
   const [editing, setEditing] = useState<Operation | null>(null);
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: "marketValueBrl", dir: -1 });
+  const importInput = useRef<HTMLInputElement>(null);
 
   const load = useCallback(
     () => api<Operation[]>(`/operations?portfolio=${portfolio}`).then(setOperations),
@@ -107,6 +108,28 @@ export function PortfolioPage({
     link.remove();
   }
 
+  async function importOperations(event: FormEvent<HTMLInputElement>) {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+    input.value = "";
+    if (!file) return;
+    const loadingId = toast.notify("Importando CSV…", "loading");
+    try {
+      const text = await file.text();
+      const { imported } = await api<{ imported: number }>("/import/operations.csv", {
+        method: "POST",
+        headers: { "Content-Type": "text/csv" },
+        body: text
+      });
+      await Promise.all([load(), onChanged()]);
+      toast.dismiss(loadingId);
+      toast.notify(`${imported} ${imported === 1 ? "operação importada" : "operações importadas"}`);
+    } catch (error) {
+      toast.dismiss(loadingId);
+      toast.notify(error instanceof Error ? error.message : "Falha ao importar CSV", "error");
+    }
+  }
+
   async function saveDividend(asset: string, amount: number) {
     await api(`/dividends/${asset}`, { method: "PUT", body: JSON.stringify({ amount }) });
     await onChanged();
@@ -117,9 +140,26 @@ export function PortfolioPage({
     <div className="portfolio">
       <SectionHeading title={title} subtitle={subtitle}>
         {isCrypto && (
-          <Button variant="ghost" className="export-btn" icon={Download} onClick={exportOperations}>
-            Exportar CSV
-          </Button>
+          <>
+            <input
+              ref={importInput}
+              type="file"
+              accept=".csv,text/csv"
+              hidden
+              onInput={importOperations}
+            />
+            <Button
+              variant="ghost"
+              className="export-btn"
+              icon={Upload}
+              onClick={() => importInput.current?.click()}
+            >
+              Importar CSV
+            </Button>
+            <Button variant="ghost" className="export-btn" icon={Download} onClick={exportOperations}>
+              Exportar CSV
+            </Button>
+          </>
         )}
         <Button icon={Plus} onClick={() => { setEditing(null); setDrawer(true); }}>
           Nova operação
