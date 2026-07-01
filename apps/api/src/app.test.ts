@@ -148,6 +148,22 @@ describe("API", () => {
     await app.close();
   });
 
+  it("clears all operations of a portfolio", async () => {
+    db = createDatabase(":memory:");
+    db.operations.create({ portfolio: "crypto", type: "buy", asset: "BTC", date: "2026-06-09", quantity: 1, total: 65000, currency: "USD" });
+    db.operations.create({ portfolio: "crypto", type: "buy", asset: "ETH", date: "2026-06-10", quantity: 2, total: 7000, currency: "USD" });
+    db.operations.create({ portfolio: "b3", type: "buy", asset: "PETR4", date: "2026-06-09", quantity: 10, total: 400, currency: "BRL" });
+    const app = buildApp({ db, priceService: { runAll: async () => [] } });
+
+    const response = await app.inject({ method: "DELETE", url: "/api/operations?portfolio=crypto" });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().removed).toBe(2);
+    expect(db.operations.list("crypto")).toHaveLength(0);
+    expect(db.operations.list("b3")).toHaveLength(1);
+    await app.close();
+  });
+
   it("auto-fetches the price of a new crypto asset on creation", async () => {
     db = createDatabase(":memory:");
     const fetched: string[] = [];

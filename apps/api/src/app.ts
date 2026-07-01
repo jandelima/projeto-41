@@ -124,6 +124,13 @@ export function buildApp({
     db.operations.remove(id);
     return { ok: true, portfolios: buildPortfolios(db) };
   });
+  app.delete("/api/operations", async (request) => {
+    const { portfolio } = z
+      .object({ portfolio: z.enum(["crypto", "b3"]).optional() })
+      .parse(request.query);
+    const removed = db.operations.clear(portfolio);
+    return { ok: true, removed, portfolios: buildPortfolios(db) };
+  });
 
   app.get("/api/positions", async () => db.positions.list());
   app.post("/api/positions", async (request, reply) => {

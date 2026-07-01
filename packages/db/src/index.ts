@@ -69,7 +69,11 @@ export function createDatabase(path: string) {
              WHERE id=@id`
           )
           .run({ notes: null, ...operation, id }).changes,
-      remove: (id: number) => raw.prepare("DELETE FROM operations WHERE id = ?").run(id).changes
+      remove: (id: number) => raw.prepare("DELETE FROM operations WHERE id = ?").run(id).changes,
+      clear: (portfolio?: string) =>
+        raw
+          .prepare(`DELETE FROM operations ${portfolio ? "WHERE portfolio = ?" : ""}`)
+          .run(...(portfolio ? [portfolio] : [])).changes
     },
     // Keyed by symbol: the asset identity across operations/prices/dividends.
     // Assumes one coin per ticker; re-picking a different coin for an existing

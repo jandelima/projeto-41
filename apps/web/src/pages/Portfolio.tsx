@@ -130,6 +130,21 @@ export function PortfolioPage({
     }
   }
 
+  async function clearOperations() {
+    const ok = await confirm({
+      title: "Remover todas as operações",
+      message: `Isto apaga TODAS as ${operations.length} operações desta carteira. As posições serão zeradas. Não pode ser desfeito.`,
+      tone: "danger",
+      confirmLabel: "Remover tudo"
+    });
+    if (!ok) return;
+    const { removed } = await api<{ removed: number }>(`/operations?portfolio=${portfolio}`, {
+      method: "DELETE"
+    });
+    await Promise.all([load(), onChanged()]);
+    toast.notify(`${removed} ${removed === 1 ? "operação removida" : "operações removidas"}`);
+  }
+
   async function saveDividend(asset: string, amount: number) {
     await api(`/dividends/${asset}`, { method: "PUT", body: JSON.stringify({ amount }) });
     await onChanged();
@@ -161,6 +176,14 @@ export function PortfolioPage({
             </Button>
           </>
         )}
+        <Button
+          variant="danger"
+          icon={Trash2}
+          disabled={operations.length === 0}
+          onClick={clearOperations}
+        >
+          Limpar tudo
+        </Button>
         <Button icon={Plus} onClick={() => { setEditing(null); setDrawer(true); }}>
           Nova operação
         </Button>
