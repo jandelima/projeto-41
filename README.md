@@ -14,6 +14,9 @@ Os dados ficam num banco SQLite local e **nunca** são versionados.
 Destaques recentes — histórico completo e versões em
 [`CHANGELOG.md`](CHANGELOG.md).
 
+- Módulo de finanças pessoais: livro-caixa com contas, categorias, etiquetas,
+  locais, foto de comprovante e transferências; painel com alvo por pessoa;
+  relatórios por categoria; e fatura de cartão com parcelamento e antecipação.
 - Página de Alocação com gráfico de rosca da meta ao lado dos controles,
   atualizando em tempo real conforme você ajusta cada classe.
 - Exportação das operações de cripto em CSV direto pela carteira, com uma coluna
@@ -29,6 +32,10 @@ Destaques recentes — histórico completo e versões em
 
 - Node.js 22.13+ e npm 10+
 - Funciona em Linux, macOS, Windows e WSL
+
+O redimensionamento das fotos de comprovante usa `sharp`. Se a instalação falhar
+com `Could not load the "sharp" module`, rode `npm install --include=optional` —
+é um bug conhecido de dependência opcional do npm, não do projeto.
 
 ## Instalação para desenvolvimento
 
@@ -98,6 +105,18 @@ Tudo é cadastrado e editado direto no app:
 - **Alocação** — defina a meta de cada classe arrastando o slider e compare com
   a carteira atual (a reserva fica fora da meta).
 - **Histórico** — evolução patrimonial com snapshots diários.
+
+O grupo **Finanças** cobre o dia a dia, separado dos investimentos:
+
+- **Painel** — saldo consolidado (atual e previsto), resumo do mês e o alvo de
+  gasto de cada pessoa contra o que foi gasto.
+- **Transações / Gastos / Entradas** — o mesmo livro com filtro fixo de tipo.
+  Registre saída, entrada ou transferência, com local, etiquetas e foto.
+- **Contas** e **Categorias** — cadastro, cores, orçamento mensal por categoria.
+- **Relatórios** — gasto por categoria contra o orçamento, composição do mês e
+  do ano, comparativo com o período anterior e tendência de 12 meses.
+- **Fatura** — cartão com fechamento e vencimento reais, fatura atual e total
+  devido como números distintos, limite, parcelamento e antecipação de parcelas.
 
 Recursos extras na barra superior:
 

@@ -20,10 +20,24 @@ import {
   Tag
 } from "../components/ui.js";
 import { api } from "../lib/api.js";
-import { currency as fmtCurrency, currencyRaw, decimal, longDate, money, percent } from "../lib/format.js";
+import { currency as fmtCurrency, currencyRaw, decimal, fx, longDate, money, percent, todayIso } from "../lib/format.js";
 import { portfolioIconUrl } from "../lib/icons.js";
 import { useToast } from "../lib/toast.js";
-import type { Asset, CryptoSearchResult, Operation } from "../lib/types.js";
+import type { Asset, CryptoSearchResult, OperationRecord } from "@projeto41/contracts";
+import { CashSourceSelect, type CashSource } from "../components/CashSourceSelect.js";
+import type { CashSettings } from "../lib/cash.js";
+
+/** A rota devolve o estado do vínculo junto da operação (fase 4). */
+type OperationRow = OperationRecord & {
+  accountName?: string | null;
+  transferId?: number | null;
+  /** Valor do lançamento no banco, em centavos de BRL. */
+  ledgerCents?: number | null;
+  transferStatus?: string | null;
+  /** De onde veio o dinheiro: um caixa de investimento ou uma conta bancária. */
+  cashSource?: "position" | "bank" | null;
+  positionId?: number | null;
+};
 
 type SortKey = "asset" | "quantity" | "averagePrice" | "price" | "marketValueBrl" | "totalReturn";
 
@@ -34,6 +48,8 @@ export function PortfolioPage({
   assets,
   investableTotal,
   usdBrl = 0,
+  openTrade = false,
+  payWithPositionId,
   onChanged
 }: {
   title: string;
@@ -42,6 +58,10 @@ export function PortfolioPage({
   assets: Asset[];
   investableTotal: number;
   usdBrl?: number;
+  /** Chega com a compra aberta: é o "Alocar" do caixa e da meta de alocação. */
+  openTrade?: boolean;
+  /** Caixa que já vem escolhido para pagar a compra aberta. */
+  payWithPositionId?: number;
   onChanged: () => Promise<void>;
 }) {
   const toast = useToast();
@@ -49,15 +69,15 @@ export function PortfolioPage({
   const isCrypto = portfolio === "crypto";
   const code = isCrypto ? "USD" : "BRL";
 
-  const [operations, setOperations] = useState<Operation[]>([]);
-  const [drawer, setDrawer] = useState(false);
-  const [editing, setEditing] = useState<Operation | null>(null);
+  const [operations, setOperations] = useState<OperationRow[]>([]);
+  const [drawer, setDrawer] = useState(openTrade);
+  const [editing, setEditing] = useState<OperationRow | null>(null);
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: "marketValueBrl", dir: -1 });
   const importInput = useRef<HTMLInputElement>(null);
 
   const load = useCallback(
-    () => api<Operation[]>(`/operations?portfolio=${portfolio}`).then(setOperations),
+    () => api<OperationRow[]>(`/operations?portfolio=${portfolio}`).then(setOperations),
     [portfolio]
   );
   useEffect(() => void load(), [load]);
@@ -85,7 +105,7 @@ export function PortfolioPage({
     );
   }
 
-  async function removeOperation(operation: Operation) {
+  async function removeOperation(operation: OperationRow) {
     const ok = await confirm({
       title: "Excluir operação",
       message: `Remover ${operation.type === "buy" ? "compra" : "venda"} de ${operation.asset}? As posições serão recalculadas.`,
@@ -93,7 +113,23 @@ export function PortfolioPage({
       confirmLabel: "Excluir"
     });
     if (!ok) return;
-    await api(`/operations/${operation.id}`, { method: "DELETE" });
+    try {
+      await api(`/operations/${operation.id}`, { method: "DELETE" });
+    } catch (error) {
+      // 409: existe lançamento conciliado no caminho. Em vez de um beco sem
+      // saída, oferecemos o desvínculo, que é a operação que destrava.
+      const message = error instanceof Error ? error.message : "Falha ao excluir";
+      toast.notify(message, "error");
+      const unlink = await confirm({
+        title: "Desvincular e excluir",
+        message: `${message} Remover o movimento de caixa e excluir a operação?`,
+        confirmLabel: "Desvincular e excluir",
+        tone: "danger"
+      });
+      if (!unlink) return;
+      await api(`/operations/${operation.id}/link`, { method: "DELETE" });
+      await api(`/operations/${operation.id}`, { method: "DELETE" });
+    }
     await Promise.all([load(), onChanged()]);
     toast.notify("Operação excluída");
   }
@@ -265,6 +301,7 @@ export function PortfolioPage({
                 <th>Ativo</th>
                 <th className="right">Quantidade</th>
                 <th className="right">Valor</th>
+                <th>Caixa</th>
                 <th className="right">Ações</th>
               </tr>
             </thead>
@@ -282,7 +319,27 @@ export function PortfolioPage({
                     </div>
                   </td>
                   <td className="right num">{decimal(operation.quantity, 8)}</td>
-                  <td className="right num">{fmtCurrency(operation.total, operation.currency)}</td>
+                  <td className="right num">
+                    {operation.currency === "USD" && operation.ledgerCents != null ? (
+                      <span title={`${fmtCurrency(operation.total, "USD")} na carteira`}>
+                        {fmtCurrency(operation.ledgerCents / 100, "BRL")}
+                        <small className="op-usd">{fmtCurrency(operation.total, "USD")}</small>
+                      </span>
+                    ) : (
+                      fmtCurrency(operation.total, operation.currency)
+                    )}
+                  </td>
+                  <td>
+                    {/* A diferença entre operação antiga e nova fica na cara:
+                        nada foi vinculado automaticamente. */}
+                    {operation.cashSource === "position" ? (
+                      <Tag tone="info">{operation.accountName ?? "Caixa"}</Tag>
+                    ) : operation.cashSource === "bank" || operation.transferId ? (
+                      <Tag tone="positive">{operation.accountName ?? "Vinculada"}</Tag>
+                    ) : (
+                      <Tag tone="muted">Sem caixa</Tag>
+                    )}
+                  </td>
                   <td className="right">
                     <div className="row-actions">
                       <IconButton
@@ -303,6 +360,7 @@ export function PortfolioPage({
 
       {drawer && (
         <OperationDrawer
+          payWithPositionId={editing ? undefined : payWithPositionId}
           portfolio={portfolio}
           initial={editing}
           usdBrl={usdBrl}
@@ -320,22 +378,22 @@ export function PortfolioPage({
 }
 
 function OperationDrawer({
+  payWithPositionId,
   portfolio,
   initial,
   usdBrl,
   onClose,
   onSaved
 }: {
+  payWithPositionId?: number;
   portfolio: "crypto" | "b3";
-  initial: Operation | null;
+  initial: OperationRow | null;
   usdBrl: number;
   onClose: () => void;
   onSaved: () => void;
 }) {
   const toast = useToast();
   const isCrypto = portfolio === "crypto";
-  // Cripto é sempre armazenado em USD; entryCurrency é só a moeda de digitação.
-  const storedCode = isCrypto ? "USD" : "BRL";
   const initialQty = initial?.quantity ?? 0;
   const initialTotal = initial?.total ?? 0;
 
@@ -343,11 +401,21 @@ function OperationDrawer({
   const [asset, setAsset] = useState(initial?.asset ?? "");
   const [slug, setSlug] = useState("");
   const [assetName, setAssetName] = useState(initial?.asset ?? "");
-  const [date, setDate] = useState(initial && initial.date !== "1900-01-01" ? initial.date : new Date().toISOString().slice(0, 10));
-  const [entryCurrency, setEntryCurrency] = useState<"USD" | "BRL">("USD");
-  const [useFee, setUseFee] = useState(false);
+  const [date, setDate] = useState(initial && initial.date !== "1900-01-01" ? initial.date : todayIso());
   const canUseBrl = isCrypto && usdBrl > 0;
+  // A operação é gravada na moeda em que foi digitada: quem compra em reais
+  // vê reais na carteira e no livro, sem conversão de ida e volta. Ao editar,
+  // a moeda é a da operação; numa nova, a última usada.
+  const [entryCurrency, setEntryCurrency] = useState<"USD" | "BRL">(() =>
+    initial && isCrypto
+      ? initial.currency
+      : canUseBrl && readEntryCurrency() !== "USD"
+        ? "BRL"
+        : "USD"
+  );
+  const [useFee, setUseFee] = useState(false);
   const code = isCrypto ? entryCurrency : "BRL";
+  const storedCode = code;
 
   // Quantidade × Preço = Total. O usuário preenche dois campos quaisquer e o
   // terceiro é resolvido sozinho. `recent` guarda a ordem de edição: o último
@@ -362,6 +430,11 @@ function OperationDrawer({
   );
   const solved = recent[2] as TradeField;
   const [saving, setSaving] = useState(false);
+  const [source, setSource] = useState<CashSource>({
+    positionId: initial?.positionId ?? payWithPositionId ?? null,
+    accountId: initial?.positionId != null ? null : (initial?.accountId ?? null)
+  });
+  const [defaultLoaded, setDefaultLoaded] = useState(false);
 
   function editField(field: TradeField, raw: string) {
     const next = { ...fields, [field]: raw };
@@ -383,7 +456,29 @@ function OperationDrawer({
       total: f.total !== "" ? String(round(Number(f.total) * factor)) : ""
     }));
     setEntryCurrency(next);
+    writeEntryCurrency(next);
   }
+
+  useEffect(() => {
+    if (initial || defaultLoaded) return;
+    // O padrão é o caixa escolhido; sem caixa, a conta (se o débito estiver
+    // ligado); sem nenhum dos dois, a operação é só registro.
+    void api<CashSettings>("/investments/cash-settings")
+      .then((settings) => {
+        setSource((current) => {
+          if (current.positionId != null || current.accountId != null) return current;
+          if (settings.defaultPositionId != null) {
+            return { positionId: settings.defaultPositionId, accountId: null };
+          }
+          return {
+            positionId: null,
+            accountId: settings.autoDebit ? settings.defaultAccountId : null
+          };
+        });
+        setDefaultLoaded(true);
+      })
+      .catch(() => setDefaultLoaded(true));
+  }, [initial, defaultLoaded]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -396,14 +491,6 @@ function OperationDrawer({
     if (!(quantity > 0) || !Number.isFinite(total) || total < 0) {
       toast.notify("Preencha ao menos dois dos três valores", "error");
       return;
-    }
-    // Operação digitada em BRL é convertida para USD antes de gravar.
-    if (isCrypto && entryCurrency === "BRL") {
-      if (!(usdBrl > 0)) {
-        toast.notify("Cotação USD/BRL indisponível para converter", "error");
-        return;
-      }
-      total = round(total / usdBrl);
     }
     // Taxa Binance (0,1%): na compra reduz a quantidade recebida; na venda
     // reduz o valor recebido. O que foi pago/vendido permanece igual.
@@ -421,6 +508,8 @@ function OperationDrawer({
         quantity,
         total,
         currency: storedCode,
+        accountId: source.accountId,
+        positionId: source.positionId,
         notes: initial?.notes ?? "",
         ...(isCrypto && slug ? { slug, name: assetName } : {})
       };
@@ -444,10 +533,23 @@ function OperationDrawer({
   const feeQty = grossQty - netQty;
   const feeTotal = grossTotal - netTotal;
 
+  /**
+   * O que vai efetivamente sair (ou entrar) na conta, em BRL. Mostrar isso
+   * antes de salvar evita o usuário descobrir a conversão depois, no extrato.
+   */
+  const totalInStored = netTotal;
+  const movementBrl = storedCode === "USD" ? totalInStored * usdBrl : totalInStored;
+  const conversion =
+    storedCode !== "USD"
+      ? undefined
+      : usdBrl > 0
+        ? `US$ ${decimal(totalInStored, 2)} · USDBRL ${fx(usdBrl)}`
+        : "Sem cotação do dólar: a operação será recusada.";
+
   return (
     <Drawer
       title={initial ? "Editar operação" : "Nova operação"}
-      subtitle={isCrypto ? "Carteira cripto · valores em USD" : "Bolsa B3 · valores em BRL"}
+      subtitle={isCrypto ? "Carteira cripto · em reais ou dólares" : "Bolsa B3 · valores em BRL"}
       onClose={onClose}
       footer={
         <>
@@ -506,6 +608,16 @@ function OperationDrawer({
             />
           )}
         </Field>
+        {/* O campo fica junto do valor, não escondido num avançado (D03): a
+            conta é uma escolha do momento da operação. */}
+        <CashSourceSelect
+          type={type}
+          value={source}
+          onChange={setSource}
+          amountBrl={movementBrl}
+          conversion={conversion}
+        />
+
         <Field label="Data">
           <DateField value={date} onChange={setDate} />
         </Field>
@@ -534,7 +646,7 @@ function OperationDrawer({
             label="Quantidade"
             value={fields.qty}
             solved={solved === "qty"}
-            step={isCrypto ? "0.001" : "1"}
+            bumpBy={isCrypto ? 0.001 : 1}
             onChange={(value) => editField("qty", value)}
           />
           <span className="trade-op" aria-hidden>×</span>
@@ -543,7 +655,7 @@ function OperationDrawer({
             code={code}
             value={fields.unit}
             solved={solved === "unit"}
-            step="0.01"
+            bumpBy={0.01}
             onChange={(value) => editField("unit", value)}
           />
           <span className="trade-op" aria-hidden>=</span>
@@ -552,7 +664,7 @@ function OperationDrawer({
             code={code}
             value={fields.total}
             solved={solved === "total"}
-            step="0.01"
+            bumpBy={0.01}
             onChange={(value) => editField("total", value)}
           />
         </div>
@@ -601,18 +713,19 @@ function EqTerm({
   code,
   value,
   solved,
-  step = "any",
+  bumpBy = 1,
   onChange
 }: {
   label: string;
   code?: string;
   value: string;
   solved: boolean;
-  step?: string;
+  /** Só as setas usam o passo: o campo aceita qualquer precisão. */
+  bumpBy?: number;
   onChange: (value: string) => void;
 }) {
   function bump(direction: 1 | -1) {
-    const delta = Number(step) || 0;
+    const delta = bumpBy;
     const next = Math.max(0, round((Number(value) || 0) + direction * delta));
     onChange(String(next));
   }
@@ -632,7 +745,6 @@ function EqTerm({
         <NumberInput
           value={value}
           min="0"
-          step={step}
           placeholder="0"
           onChange={(event) => onChange(event.target.value)}
         />
@@ -707,6 +819,24 @@ function InlineMoney({ value, onSave }: { value: number; onSave: (value: number)
       {money(value)}
     </button>
   );
+}
+
+const ENTRY_CURRENCY_KEY = "portfolio.entryCurrency";
+
+function readEntryCurrency(): string | null {
+  try {
+    return localStorage.getItem(ENTRY_CURRENCY_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function writeEntryCurrency(value: "USD" | "BRL") {
+  try {
+    localStorage.setItem(ENTRY_CURRENCY_KEY, value);
+  } catch {
+    // Sem storage, a moeda só não é lembrada.
+  }
 }
 
 function round(value: number) {

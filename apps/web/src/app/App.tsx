@@ -1,78 +1,55 @@
-import {
-  BriefcaseBusiness,
-  CalendarDays,
-  ChartNoAxesCombined,
-  Coins,
-  Eye,
-  EyeOff,
-  History,
-  LayoutDashboard,
-  Menu,
-  Moon,
-  RefreshCw,
-  ShieldCheck,
-  Sun,
-  Target,
-  Wallet,
-  X
-} from "lucide-react";
+import { Eye, EyeOff, Menu, Moon, RefreshCw, ShieldCheck, Sun, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { ComponentType } from "react";
 import { AllocationPage } from "../pages/Allocation.js";
+import { InvestmentCashPage } from "../pages/InvestmentCash.js";
 import { ContributionsPage } from "../pages/Contributions.js";
 import { DashboardPage } from "../pages/Dashboard.js";
 import { HistoryPage } from "../pages/History.js";
 import { PlanningPage } from "../pages/Planning.js";
 import { PortfolioPage } from "../pages/Portfolio.js";
 import { PositionsPage } from "../pages/Positions.js";
+import { AccountsPage } from "../pages/finance/Accounts.js";
+import { CategoriesPage } from "../pages/finance/Categories.js";
+import { FinanceDashboardPage } from "../pages/finance/FinanceDashboard.js";
+import { InvoicePage } from "../pages/finance/Invoice.js";
+import { GoalsPage } from "../pages/finance/Goals.js";
+import { ImportPage } from "../pages/finance/Import.js";
+import { NetWorthPage } from "../pages/finance/NetWorth.js";
+import { ReportsPage } from "../pages/finance/Reports.js";
+import { SpendingAllocationPage } from "../pages/finance/SpendingAllocation.js";
+import {
+  ExpensesPage,
+  IncomePage,
+  TransactionsPage
+} from "../pages/finance/Ledger.js";
+import { InvestmentAccountSwitch } from "../components/InvestmentAccountSwitch.js";
 import { Loading } from "../components/ui.js";
 import { Ticker, TickerSettings } from "../components/ticker.js";
 import type { TickerCandidate } from "../components/ticker.js";
 import { api } from "../lib/api.js";
+import {
+  ALL_INVESTMENT_ACCOUNTS,
+  currentInvestmentAccount,
+  PRINCIPAL_INVESTMENT_ACCOUNT,
+  setCurrentInvestmentAccount
+} from "../lib/investment-account.js";
 import { relativeTime } from "../lib/format.js";
 import { portfolioIconUrl } from "../lib/icons.js";
 import { usePrivacy } from "../lib/privacy.js";
 import { useTheme } from "../lib/theme.js";
 import { useToast } from "../lib/toast.js";
-import type { Dashboard } from "../lib/types.js";
-
-type Page =
-  | "dashboard"
-  | "crypto"
-  | "b3"
-  | "positions"
-  | "contributions"
-  | "planning"
-  | "allocation"
-  | "history";
-
-type NavItem = { id: Page; label: string; icon: ComponentType<{ size?: number | string }> };
-
-const nav: { group: string; items: NavItem[] }[] = [
-  {
-    group: "Resumo",
-    items: [{ id: "dashboard", label: "Visão geral", icon: LayoutDashboard }]
-  },
-  {
-    group: "Carteiras",
-    items: [
-      { id: "crypto", label: "Cripto", icon: Coins },
-      { id: "b3", label: "Bolsa B3", icon: BriefcaseBusiness },
-      { id: "positions", label: "Caixa e renda fixa", icon: Wallet }
-    ]
-  },
-  {
-    group: "Análises",
-    items: [
-      { id: "contributions", label: "Aportes", icon: CalendarDays },
-      { id: "planning", label: "Planejamento", icon: ChartNoAxesCombined },
-      { id: "allocation", label: "Alocação", icon: Target },
-      { id: "history", label: "Histórico", icon: History }
-    ]
-  }
-];
-
-const allItems = nav.flatMap((section) => section.items);
+import type { LedgerPreset } from "../lib/navigation.js";
+import type { Dashboard, InvestmentAccount } from "@projeto41/contracts";
+import {
+  initialPage,
+  lastPageOf,
+  moduleOf,
+  modules,
+  navItem,
+  rememberPage,
+  type ModuleId,
+  type Page
+} from "./modules.js";
 
 const TICKER_HIDDEN_KEY = "projeto41-ticker-hidden";
 
@@ -93,7 +70,19 @@ export function App() {
   const demoMode =
     (import.meta as ImportMeta & { env?: Record<string, string> }).env?.VITE_DEMO_MODE === "true";
 
-  const [page, setPage] = useState<Page>("dashboard");
+  const [page, setPage] = useState<Page>(initialPage);
+  // Recorte levado de uma tela para outra (periodo, pessoa). A chave remonta a
+  // tela de destino para que ela nasca com o filtro, em vez de herdar o antigo.
+  const [preset, setPreset] = useState<{ key: number; value: LedgerPreset }>({
+    key: 0,
+    value: {}
+  });
+  const navigate = useCallback((next: Page, value: LedgerPreset = {}) => {
+    setPage(next);
+    rememberPage(next);
+    setPreset((current) => ({ key: current.key + 1, value }));
+    window.scrollTo({ top: 0 });
+  }, []);
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -101,6 +90,21 @@ export function App() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [tickerHidden, setTickerHidden] = useState<Set<string>>(readTickerHidden);
   const [tickerOpen, setTickerOpen] = useState(false);
+
+  const module = moduleOf(page);
+  const current = navItem(page);
+  const investing = module.id === "investments";
+
+  // O módulo vai para o <html>, como o tema: a cor de destaque de cada um
+  // alcança também o fundo e o que não mora dentro do app-shell.
+  useEffect(() => {
+    document.documentElement.dataset.module = module.id;
+  }, [module.id]);
+
+  const switchModule = (id: ModuleId) => {
+    if (id === module.id) return;
+    navigate(lastPageOf(id));
+  };
 
   useEffect(() => {
     window.localStorage.setItem(TICKER_HIDDEN_KEY, JSON.stringify([...tickerHidden]));
@@ -115,16 +119,45 @@ export function App() {
     });
   }, []);
 
+  // Conta do módulo de investimentos: cada uma com os próprios registros.
+  const [investmentAccounts, setInvestmentAccounts] = useState<InvestmentAccount[]>([]);
+  const [investmentAccountId, setInvestmentAccountId] = useState(currentInvestmentAccount);
+  const chooseInvestmentAccount = useCallback((id: number) => {
+    if (id === currentInvestmentAccount()) return;
+    setCurrentInvestmentAccount(id);
+    setInvestmentAccountId(id);
+    setLoading(true);
+  }, []);
+  const loadInvestmentAccounts = useCallback(async () => {
+    const list = await api<InvestmentAccount[]>("/investment-accounts", {
+      headers: ALL_INVESTMENT_ACCOUNTS
+    });
+    setInvestmentAccounts(list);
+    // A conta lembrada pode não existir mais (banco recriado).
+    if (!list.some((account) => account.id === currentInvestmentAccount())) {
+      chooseInvestmentAccount(PRINCIPAL_INVESTMENT_ACCOUNT);
+    }
+  }, [chooseInvestmentAccount]);
+  // Recarrega ao entrar no módulo: uma pessoa nova de Finanças já aparece.
+  useEffect(() => {
+    void loadInvestmentAccounts().catch(() => undefined);
+  }, [loadInvestmentAccounts, investing]);
+
+  // O Patrimônio do módulo de finanças soma todas as contas de investimento;
+  // as telas de investimento veem só a conta escolhida.
   const loadDashboard = useCallback(async () => {
     try {
       setError("");
-      setDashboard(await api<Dashboard>("/dashboard"));
+      setDashboard(
+        await api<Dashboard>("/dashboard", investing ? undefined : { headers: ALL_INVESTMENT_ACCOUNTS })
+      );
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Não foi possível carregar os dados");
     } finally {
       setLoading(false);
     }
-  }, []);
+    // A conta entra nas dependências para recarregar ao trocar de conta.
+  }, [investing, investmentAccountId]);
 
   useEffect(() => void loadDashboard(), [loadDashboard]);
 
@@ -170,8 +203,6 @@ export function App() {
     }
   }
 
-  const current = allItems.find((item) => item.id === page)!;
-
   const tickerCandidates = useMemo<TickerCandidate[]>(() => {
     if (!dashboard) return [];
     const tagged = [
@@ -196,6 +227,11 @@ export function App() {
     [tickerCandidates, tickerHidden]
   );
 
+  // As telas de finanças buscam os próprios dados: não esperam as cotações.
+  // Só o Patrimônio usa o painel de investimentos, e ele aceita `null`.
+  const usesDashboard = investing || page === "networth";
+  const waiting = investing && loading;
+
   return (
     <div className="app-shell">
       <aside className={`sidebar ${mobileOpen ? "sidebar-open" : ""}`}>
@@ -219,8 +255,40 @@ export function App() {
           </button>
         </div>
 
-        <nav>
-          {nav.map((section) => (
+        <div className="module-switch">
+          <div className="module-switch-options" role="tablist" aria-label="Módulo">
+            {modules.map((option) => {
+              const Icon = option.icon;
+              const active = option.id === module.id;
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  className={active ? "active" : ""}
+                  data-module={option.id}
+                  onClick={() => switchModule(option.id)}
+                >
+                  <Icon size={18} />
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
+          <p className="module-switch-tagline">{module.tagline}</p>
+        </div>
+
+        {investing && investmentAccounts.length > 0 && (
+          <InvestmentAccountSwitch
+            accounts={investmentAccounts}
+            value={investmentAccountId}
+            onChange={chooseInvestmentAccount}
+          />
+        )}
+
+        <nav aria-label={`Telas de ${module.label}`}>
+          {module.groups.map((section) => (
             <div className="nav-group" key={section.group}>
               <span className="nav-group-label">{section.group}</span>
               {section.items.map((item) => {
@@ -229,8 +297,9 @@ export function App() {
                   <button
                     key={item.id}
                     className={page === item.id ? "nav-active" : ""}
+                    aria-current={page === item.id ? "page" : undefined}
                     onClick={() => {
-                      setPage(item.id);
+                      navigate(item.id);
                       setMobileOpen(false);
                     }}
                   >
@@ -255,7 +324,7 @@ export function App() {
       {mobileOpen && <div className="scrim" onClick={() => setMobileOpen(false)} />}
 
       <main>
-        {tickerCandidates.length > 0 && (
+        {investing && tickerCandidates.length > 0 && (
           <Ticker items={tickerItems} onConfigure={() => setTickerOpen(true)} />
         )}
         <header className="topbar">
@@ -263,14 +332,14 @@ export function App() {
             <Menu />
           </button>
           <div className="topbar-title">
-            <span className="eyebrow">Carteira pessoal</span>
+            <span className="eyebrow">{module.label}</span>
             <h1>
               {current.label}
               {demoMode && <span className="demo-badge">DEMO</span>}
             </h1>
           </div>
           <div className="topbar-actions">
-            {dashboard?.updatedAt && (
+            {investing && dashboard?.updatedAt && (
               <span className="updated-chip">Cotações {relativeTime(dashboard.updatedAt)}</span>
             )}
             <button
@@ -284,46 +353,96 @@ export function App() {
             <button className="icon-toggle" onClick={toggle} aria-label="Alternar tema" title="Alternar tema">
               {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
             </button>
-            <button className="refresh-button" onClick={refreshPrices} disabled={refreshing}>
-              <RefreshCw size={17} className={refreshing ? "spin" : ""} />
-              <span>{refreshing ? "Atualizando" : "Atualizar preços"}</span>
-            </button>
+            {investing && (
+              <button className="refresh-button" onClick={refreshPrices} disabled={refreshing}>
+                <RefreshCw size={17} className={refreshing ? "spin" : ""} />
+                <span>{refreshing ? "Atualizando" : "Atualizar preços"}</span>
+              </button>
+            )}
           </div>
         </header>
 
-        {error && <div className="alert">{error}</div>}
+        {usesDashboard && error && <div className="alert">{error}</div>}
 
-        {loading ? (
+        {waiting ? (
           <Loading />
         ) : (
-          <div className="page">
+          // Trocar de conta remonta as telas: nenhuma guarda dado da anterior.
+          <div className="page" key={investmentAccountId}>
             {page === "dashboard" && dashboard && <DashboardPage data={dashboard} />}
+            {page === "investment-cash" && (
+              <InvestmentCashPage
+                dashboard={dashboard}
+                onChanged={loadDashboard}
+                onBuy={(portfolio, positionId) =>
+                  navigate(portfolio, { openTrade: true, payWithPositionId: positionId })
+                }
+                onOpenPositions={() => navigate("positions")}
+              />
+            )}
             {page === "crypto" && (
               <PortfolioPage
+                key={preset.key}
+                openTrade={preset.value.openTrade}
+                payWithPositionId={preset.value.payWithPositionId}
                 title="Carteira cripto"
                 subtitle="Posições consolidadas em USD e convertidas para BRL"
                 portfolio="crypto"
                 assets={dashboard?.portfolios.crypto ?? []}
-                investableTotal={dashboard ? dashboard.totalBrl - dashboard.reserveBrl : 0}
+                investableTotal={dashboard?.investableBrl ?? 0}
                 usdBrl={dashboard?.usdBrl ?? 0}
                 onChanged={loadDashboard}
               />
             )}
             {page === "b3" && (
               <PortfolioPage
+                key={preset.key}
+                openTrade={preset.value.openTrade}
+                payWithPositionId={preset.value.payWithPositionId}
                 title="Bolsa brasileira"
                 subtitle="Ativos, preço médio e dividendos acumulados"
                 portfolio="b3"
                 assets={dashboard?.portfolios.b3 ?? []}
-                investableTotal={dashboard ? dashboard.totalBrl - dashboard.reserveBrl : 0}
+                investableTotal={dashboard?.investableBrl ?? 0}
                 onChanged={loadDashboard}
               />
             )}
-            {page === "positions" && <PositionsPage onChanged={loadDashboard} />}
+            {page === "positions" && (
+              <PositionsPage onChanged={loadDashboard} onOpenCash={() => navigate("investment-cash")} />
+            )}
             {page === "contributions" && <ContributionsPage />}
             {page === "planning" && <PlanningPage />}
-            {page === "allocation" && dashboard && <AllocationPage dashboard={dashboard} />}
-            {page === "history" && <HistoryPage history={dashboard?.history ?? []} />}
+            {page === "allocation" && dashboard && (
+              <AllocationPage
+                dashboard={dashboard}
+                onAllocate={(destination) =>
+                  destination === "positions"
+                    ? navigate("investment-cash")
+                    : navigate(destination, { openTrade: true })
+                }
+                onOpenCash={() => navigate("investment-cash")}
+              />
+            )}
+            {page === "history" && (
+              <HistoryPage
+                history={dashboard?.history ?? []}
+                cashControlStartedOn={dashboard?.cashControlStartedOn ?? null}
+              />
+            )}
+            {page === "finance" && <FinanceDashboardPage onNavigate={navigate} />}
+            {page === "reports" && <ReportsPage />}
+            {page === "invoice" && <InvoicePage onNavigate={navigate} />}
+            {page === "goals" && <GoalsPage />}
+            {page === "import" && <ImportPage />}
+            {page === "networth" && (
+              <NetWorthPage dashboard={dashboard} onChanged={loadDashboard} />
+            )}
+            {page === "transactions" && <TransactionsPage key={preset.key} preset={preset.value} />}
+            {page === "expenses" && <ExpensesPage key={preset.key} preset={preset.value} />}
+            {page === "income" && <IncomePage key={preset.key} preset={preset.value} />}
+            {page === "accounts" && <AccountsPage onOpenCash={() => navigate("investment-cash")} />}
+            {page === "categories" && <CategoriesPage />}
+            {page === "spending-allocation" && <SpendingAllocationPage />}
           </div>
         )}
       </main>

@@ -5,7 +5,7 @@ import { Button, Field, Loading, MiniStat, NumberInput, Panel, SectionHeading } 
 import { api } from "../lib/api.js";
 import { money } from "../lib/format.js";
 import { useToast } from "../lib/toast.js";
-import type { PlanningForm } from "../lib/types.js";
+import type { PlanningForm } from "@projeto41/contracts";
 
 const fields: { key: keyof PlanningForm; label: string; suffix: string }[] = [
   { key: "initialCapital", label: "Capital inicial", suffix: "R$" },

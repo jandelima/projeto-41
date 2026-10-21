@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App.js";
 import { ConfirmProvider } from "../components/dialog.js";
 import { PrivacyProvider } from "../lib/privacy.js";
@@ -30,6 +30,13 @@ function renderApp() {
 }
 
 describe("App", () => {
+  // Sem `globals`, o Testing Library nao desmonta sozinho: o que ficasse
+  // montado renderizaria depois do ambiente desfeito.
+  afterEach(() => {
+    cleanup();
+    window.localStorage.clear();
+  });
+
   beforeEach(() => {
     vi.stubGlobal(
       "fetch",
@@ -56,5 +63,23 @@ describe("App", () => {
     expect(await screen.findByText("Patrimônio total")).toBeInTheDocument();
     expect(screen.getByText("Cripto")).toBeInTheDocument();
     expect(screen.getByText("Planejamento")).toBeInTheDocument();
+  });
+
+  it("troca o menu inteiro ao mudar de modulo", async () => {
+    renderApp();
+    await screen.findByText("Patrimônio total");
+    const switcher = screen.getByRole("tablist", { name: "Módulo" });
+    fireEvent.click(within(switcher).getByRole("tab", { name: /Finanças/ }));
+
+    expect(within(switcher).getByRole("tab", { name: /Finanças/ })).toHaveAttribute(
+      "aria-selected",
+      "true"
+    );
+    expect(document.documentElement.dataset.module).toBe("finance");
+    expect(screen.getByRole("button", { name: "Fatura" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Cripto" })).not.toBeInTheDocument();
+    // Cotacoes sao assunto dos investimentos.
+    expect(screen.queryByText("Atualizar preços")).not.toBeInTheDocument();
+    expect(window.localStorage.getItem("projeto41-module")).toBe("finance");
   });
 });

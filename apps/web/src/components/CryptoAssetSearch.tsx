@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import type { KeyboardEvent } from "react";
 import { api } from "../lib/api.js";
 import { portfolioIconUrl } from "../lib/icons.js";
-import type { CryptoSearchResult } from "../lib/types.js";
+import type { CryptoSearchResult } from "@projeto41/contracts";
 import { AssetIcon, IconButton } from "./ui.js";
 
 export function CryptoAssetSearch({

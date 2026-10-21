@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { createDatabase, type AppDatabase } from "./index.js";
+import { createDatabase, createTestDatabase, type AppDatabase } from "./index.js";
 
 let db: AppDatabase | undefined;
 let temporaryDirectory: string | undefined;
@@ -18,7 +18,7 @@ afterEach(() => {
 
 describe("database", () => {
   it("creates generic allocation targets for a new database", () => {
-    db = createDatabase(":memory:");
+    db = createTestDatabase();
 
     const targets = db.targets.list();
 
@@ -48,7 +48,7 @@ describe("database", () => {
   });
 
   it("remembers the CoinGecko slug for a crypto symbol", () => {
-    db = createDatabase(":memory:");
+    db = createTestDatabase();
     db.cryptoAssets.upsert({ symbol: "AVAX", slug: "avalanche-2", name: "Avalanche" });
 
     expect(db.cryptoAssets.get("AVAX")).toEqual({
@@ -62,7 +62,7 @@ describe("database", () => {
   });
 
   it("stores operations and enforces one snapshot per date", () => {
-    db = createDatabase(":memory:");
+    db = createTestDatabase();
     db.operations.create({
       portfolio: "crypto",
       type: "buy",
@@ -91,7 +91,7 @@ describe("database", () => {
   });
 
   it("rolls the daily price baseline only when a new day arrives", () => {
-    db = createDatabase(":memory:");
+    db = createTestDatabase();
     const base = {
       symbol: "BTC",
       currency: "USD" as const,

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { createDatabase, type AppDatabase } from "@projeto41/db";
+import { createTestDatabase, type AppDatabase } from "@projeto41/db";
 import { importMappedWorkbook } from "./import-service.js";
 
 let db: AppDatabase | undefined;
@@ -7,7 +7,7 @@ afterEach(() => db?.close());
 
 describe("importMappedWorkbook", () => {
   it("imports once and rejects the same fingerprint", () => {
-    db = createDatabase(":memory:");
+    db = createTestDatabase();
     const data = {
       operations: [
         {

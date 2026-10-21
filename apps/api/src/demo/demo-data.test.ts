@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { createDatabase, type AppDatabase } from "@projeto41/db";
+import { createTestDatabase, type AppDatabase } from "@projeto41/db";
 import { buildDashboard } from "../services/portfolio-service.js";
 import { seedDemoDatabase } from "./demo-data.js";
 
@@ -9,7 +9,7 @@ afterEach(() => db?.close());
 
 describe("seedDemoDatabase", () => {
   it("creates a synthetic portfolio worth exactly R$ 20,000", () => {
-    db = createDatabase(":memory:");
+    db = createTestDatabase();
     seedDemoDatabase(db, new Date("2026-06-09T12:00:00-03:00"));
 
     const dashboard = buildDashboard(db);

@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { createDatabase, type AppDatabase } from "@projeto41/db";
+import { createTestDatabase, type AppDatabase } from "@projeto41/db";
 import { buildApp } from "./app.js";
 
 let db: AppDatabase | undefined;
@@ -19,7 +19,7 @@ afterEach(() => {
 
 describe("API", () => {
   it("serves the built web app in production mode", async () => {
-    db = createDatabase(":memory:");
+    db = createTestDatabase();
     temporaryDirectory = mkdtempSync(join(tmpdir(), "projeto41-web-"));
     writeFileSync(join(temporaryDirectory, "index.html"), "<h1>Projeto 41</h1>");
     const app = buildApp({
@@ -36,7 +36,7 @@ describe("API", () => {
   });
 
   it("creates an operation and returns the recalculated portfolio", async () => {
-    db = createDatabase(":memory:");
+    db = createTestDatabase();
     const app = buildApp({ db, priceService: { runAll: async () => [] } as any });
 
     const created = await app.inject({
@@ -60,7 +60,7 @@ describe("API", () => {
   });
 
   it("exports crypto operations as CSV", async () => {
-    db = createDatabase(":memory:");
+    db = createTestDatabase();
     db.operations.create({
       portfolio: "crypto",
       type: "buy",
@@ -93,7 +93,7 @@ describe("API", () => {
   });
 
   it("imports crypto operations from CSV in the export format", async () => {
-    db = createDatabase(":memory:");
+    db = createTestDatabase();
     const fetched: string[] = [];
     const app = buildApp({
       db,
@@ -133,7 +133,7 @@ describe("API", () => {
   });
 
   it("rejects a CSV import with invalid rows without inserting anything", async () => {
-    db = createDatabase(":memory:");
+    db = createTestDatabase();
     const app = buildApp({ db, priceService: { runAll: async () => [] } });
 
     const response = await app.inject({
@@ -149,7 +149,7 @@ describe("API", () => {
   });
 
   it("clears all operations of a portfolio", async () => {
-    db = createDatabase(":memory:");
+    db = createTestDatabase();
     db.operations.create({ portfolio: "crypto", type: "buy", asset: "BTC", date: "2026-06-09", quantity: 1, total: 65000, currency: "USD" });
     db.operations.create({ portfolio: "crypto", type: "buy", asset: "ETH", date: "2026-06-10", quantity: 2, total: 7000, currency: "USD" });
     db.operations.create({ portfolio: "b3", type: "buy", asset: "PETR4", date: "2026-06-09", quantity: 10, total: 400, currency: "BRL" });
@@ -165,7 +165,7 @@ describe("API", () => {
   });
 
   it("auto-fetches the price of a new crypto asset on creation", async () => {
-    db = createDatabase(":memory:");
+    db = createTestDatabase();
     const fetched: string[] = [];
     const app = buildApp({
       db,
@@ -198,7 +198,7 @@ describe("API", () => {
   });
 
   it("searches crypto assets through the price service", async () => {
-    db = createDatabase(":memory:");
+    db = createTestDatabase();
     const app = buildApp({
       db,
       priceService: {
@@ -219,7 +219,7 @@ describe("API", () => {
   });
 
   it("searches B3 assets through the price service", async () => {
-    db = createDatabase(":memory:");
+    db = createTestDatabase();
     const app = buildApp({
       db,
       priceService: {
@@ -240,7 +240,7 @@ describe("API", () => {
   });
 
   it("remembers the CoinGecko slug picked for a new crypto operation", async () => {
-    db = createDatabase(":memory:");
+    db = createTestDatabase();
     const app = buildApp({
       db,
       priceService: { runAll: async () => [], ensureCryptoPrice: async () => true }
@@ -271,7 +271,7 @@ describe("API", () => {
   });
 
   it("does not auto-fetch crypto prices for a new B3 asset", async () => {
-    db = createDatabase(":memory:");
+    db = createTestDatabase();
     let calls = 0;
     const app = buildApp({
       db,
@@ -303,7 +303,7 @@ describe("API", () => {
   });
 
   it("returns a structured refresh failure instead of an internal error", async () => {
-    db = createDatabase(":memory:");
+    db = createTestDatabase();
     const app = buildApp({
       db,
       priceService: {
@@ -327,7 +327,7 @@ describe("API", () => {
   });
 
   it("preserves known HTTP errors instead of masking them as internal errors", async () => {
-    db = createDatabase(":memory:");
+    db = createTestDatabase();
     const app = buildApp({ db, priceService: { runAll: async () => [] } });
 
     const response = await app.inject({

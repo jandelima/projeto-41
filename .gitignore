@@ -3,6 +3,8 @@ Projeto 41.xlsx:Zone.Identifier
 *.sqlite
 *.sqlite-*
 data/
+# Os dados de referência do módulo de finanças são versionados (a migração 006 os importa).
+!packages/db/src/migrations/data/
 backups/
 .env
 .worktrees/

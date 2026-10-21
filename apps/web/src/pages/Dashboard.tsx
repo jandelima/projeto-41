@@ -2,13 +2,13 @@ import { ArrowDownRight, ArrowUpRight, CircleDollarSign, PiggyBank, Wallet } fro
 import { useMemo, useState } from "react";
 import { AreaTrend, Donut } from "../components/charts.js";
 import { AnimatedNumber, Card, Delta, Kpi, Panel } from "../components/ui.js";
-import { fx, money, percent, signedPercent, usd } from "../lib/format.js";
-import type { Dashboard, Snapshot } from "../lib/types.js";
+import { fx, money, percent, signedPercent, todayIso, usd } from "../lib/format.js";
+import type { Dashboard, Snapshot } from "@projeto41/contracts";
 
 // Variação do saldo atual (ao vivo) em relação ao snapshot mais próximo de `days` atrás.
 function changeSince(history: Snapshot[], current: number, days: number) {
   if (!history.length) return 0;
-  const cutoff = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
+  const cutoff = todayIso(new Date(Date.now() - days * 86400000));
   const past = [...history].reverse().find((item) => item.date <= cutoff) ?? history[0]!;
   return past.totalBrl > 0 ? current / past.totalBrl - 1 : 0;
 }
@@ -32,7 +32,7 @@ export function filterHistory<T extends { date: string }>(history: T[], range: R
     range === "ytd"
       ? new Date(now.getFullYear(), 0, 1)
       : new Date(now.getTime() - days * 86400000);
-  const iso = cutoff.toISOString().slice(0, 10);
+  const iso = todayIso(cutoff);
   return history.filter((item) => item.date >= iso);
 }
 
@@ -49,6 +49,8 @@ export function DashboardPage({ data }: { data: Dashboard }) {
     return [
       { key: "bitcoin", label: "Bitcoin", value: btc },
       { key: "shitcoins", label: "Altcoins", value: alts },
+      // A classe cripto soma a carteira e os caixas em cripto (stablecoin).
+      { key: "crypto", label: "Caixa cripto", value: Math.max((data.categories.crypto ?? 0) - btc - alts, 0) },
       { key: "b3", label: "Bolsa B3", value: data.categories.b3 ?? 0 },
       { key: "dollar", label: "Dólar", value: data.categories.dollar ?? 0 },
       { key: "cash", label: "Caixa BR", value: data.categories.cash ?? 0 },
@@ -60,7 +62,7 @@ export function DashboardPage({ data }: { data: Dashboard }) {
   }, [data]);
 
   // "Hoje" = saldo atual vs. o último fechamento registrado em um dia anterior a hoje.
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayIso();
   const yesterday = [...data.history].reverse().find((item) => item.date < today);
   const dayChange = yesterday && yesterday.totalBrl > 0 ? data.totalBrl / yesterday.totalBrl - 1 : 0;
   const monthChange = changeSince(data.history, data.totalBrl, 30);
@@ -107,12 +109,30 @@ export function DashboardPage({ data }: { data: Dashboard }) {
           </div>
         </Card>
         <div className="kpi-stack stagger">
+          {/* Sem base comparável, mostrar "—" é mais honesto do que um
+              percentual que mistura patrimônio com e sem caixa. */}
           <Kpi
-            icon={data.annualReturn >= 0 ? ArrowUpRight : ArrowDownRight}
+            icon={(data.annualReturn ?? 0) >= 0 ? ArrowUpRight : ArrowDownRight}
             label="Rentabilidade no ano"
-            value={<AnimatedNumber value={data.annualReturn} format={percent} />}
-            tone={data.annualReturn >= 0 ? "positive" : "negative"}
-            detail="descontando aportes"
+            value={
+              data.annualReturn == null ? (
+                "—"
+              ) : (
+                <AnimatedNumber value={data.annualReturn} format={percent} />
+              )
+            }
+            tone={
+              data.annualReturn == null
+                ? ""
+                : data.annualReturn >= 0
+                  ? "positive"
+                  : "negative"
+            }
+            detail={
+              data.annualReturn == null
+                ? "sem base comparável antes do controle de caixa"
+                : "descontando aportes"
+            }
           />
           <Kpi
             icon={CircleDollarSign}

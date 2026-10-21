@@ -14,11 +14,40 @@ import { Button } from "./ui.js";
 function useEscape(onClose: () => void) {
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      // Uma lista aberta dentro do drawer consome o Esc (e marca o evento):
+      // fechar a lista não pode fechar o formulário junto.
+      if (event.key === "Escape" && !event.defaultPrevented) onClose();
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [onClose]);
+}
+
+/**
+ * Trava a rolagem da página enquanto houver um popup aberto. Sem isso a roda
+ * do mouse sobre o fundo escurecido rola a tela de trás. Contador porque um
+ * popup pode abrir por cima de outro (confirmação sobre o drawer): só o
+ * último a fechar devolve a rolagem. A largura da barra vira padding para a
+ * página não pular para o lado.
+ */
+let scrollLocks = 0;
+function useScrollLock() {
+  useEffect(() => {
+    const root = document.documentElement;
+    if (scrollLocks === 0) {
+      const scrollbar = window.innerWidth - root.clientWidth;
+      root.style.overflow = "hidden";
+      if (scrollbar > 0) root.style.paddingRight = `${scrollbar}px`;
+    }
+    scrollLocks += 1;
+    return () => {
+      scrollLocks -= 1;
+      if (scrollLocks === 0) {
+        root.style.overflow = "";
+        root.style.paddingRight = "";
+      }
+    };
+  }, []);
 }
 
 export function Modal({
@@ -33,6 +62,7 @@ export function Modal({
   width?: number;
 }) {
   useEscape(onClose);
+  useScrollLock();
   return (
     <div className="overlay" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
       <div className="modal" style={{ width: `min(${width}px, 100%)` }} role="dialog" aria-modal>
@@ -62,6 +92,7 @@ export function Drawer({
   footer?: ReactNode;
 }) {
   useEscape(onClose);
+  useScrollLock();
   return (
     <div className="overlay overlay-right" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
       <aside className="drawer" role="dialog" aria-modal>

@@ -1,7 +1,10 @@
+import { delimiter } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { buildRuntimeEnvironment, launchProject } from "./launch-project.mjs";
 
 describe("buildRuntimeEnvironment", () => {
+  // O separador de PATH é o do sistema: ":" no Unix, ";" no Windows. Fixar
+  // um deles aqui quebra o teste na outra plataforma, não o código.
   it("puts the active Node installation first in PATH", () => {
     expect(
       buildRuntimeEnvironment(
@@ -9,7 +12,7 @@ describe("buildRuntimeEnvironment", () => {
         { PATH: "/usr/local/bin:/usr/bin" }
       ).PATH
     ).toBe(
-      "/home/user/.nvm/versions/node/v22.12.0/bin:/usr/local/bin:/usr/bin"
+      `/home/user/.nvm/versions/node/v22.12.0/bin${delimiter}/usr/local/bin:/usr/bin`
     );
   });
 });

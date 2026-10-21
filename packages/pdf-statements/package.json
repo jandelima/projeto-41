@@ -1,0 +1,16 @@
+{
+  "name": "@projeto41/pdf-statements",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./testing": "./src/testing/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@projeto41/finance": "*",
+    "unpdf": "1.8.1"
+  }
+}

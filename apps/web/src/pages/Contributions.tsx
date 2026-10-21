@@ -13,17 +13,17 @@ import {
   SectionHeading
 } from "../components/ui.js";
 import { api } from "../lib/api.js";
-import { longDate, money, monthShort } from "../lib/format.js";
+import { longDate, money, monthShort, todayIso } from "../lib/format.js";
 import { useToast } from "../lib/toast.js";
-import type { Contribution } from "../lib/types.js";
+import type { ContributionRecord } from "@projeto41/contracts";
 
 export function ContributionsPage() {
   const toast = useToast();
   const confirm = useConfirm();
-  const [items, setItems] = useState<Contribution[]>([]);
+  const [items, setItems] = useState<ContributionRecord[]>([]);
   const [open, setOpen] = useState(false);
 
-  const load = useCallback(() => api<Contribution[]>("/contributions").then(setItems), []);
+  const load = useCallback(() => api<ContributionRecord[]>("/contributions").then(setItems), []);
   useEffect(() => void load(), [load]);
 
   const year = new Date().getFullYear();
@@ -47,7 +47,7 @@ export function ContributionsPage() {
     value: 0
   });
 
-  async function remove(item: Contribution) {
+  async function remove(item: ContributionRecord) {
     const ok = await confirm({
       title: "Excluir aporte",
       message: `Remover aporte de ${money(item.amount)} em ${longDate(item.date)}?`,
@@ -107,27 +107,35 @@ export function ContributionsPage() {
         </div>
       </Panel>
 
-      <Panel title="Lançamentos" subtitle="Mais recentes primeiro">
+      <Panel
+        title="Lançamentos"
+        subtitle="Mais recentes primeiro · os aportes feitos pelo livro entram sozinhos"
+      >
         <div className="table-scroll compact">
           <table className="data-table">
             <thead>
               <tr>
                 <th>Data</th>
                 <th className="right">Valor</th>
+                <th>Origem</th>
                 <th>Observação</th>
                 <th className="right">Ações</th>
               </tr>
             </thead>
             <tbody>
               {[...items].reverse().map((item) => (
-                <tr key={item.id}>
+                <tr key={`${item.source ?? "manual"}-${item.id}`}>
                   <td>{longDate(item.date)}</td>
                   <td className="right num">
-                    <strong>{money(item.amount)}</strong>
+                    <strong className={item.amount < 0 ? "fin-negative" : ""}>{money(item.amount)}</strong>
                   </td>
+                  <td>{item.source === "ledger" ? (item.accountName ?? "Livro") : "Manual"}</td>
                   <td className="muted">{item.notes || "—"}</td>
                   <td className="right">
-                    <IconButton icon={Trash2} label="Excluir" tone="danger" onClick={() => remove(item)} />
+                    {/* O do livro se desfaz em Em caixa, que devolve a posição junto. */}
+                    {item.source !== "ledger" && (
+                      <IconButton icon={Trash2} label="Excluir" tone="danger" onClick={() => remove(item)} />
+                    )}
                   </td>
                 </tr>
               ))}
@@ -155,7 +163,7 @@ export function ContributionsPage() {
         >
           <form id="contribution-form" className="stack" onSubmit={submit}>
             <Field label="Data">
-              <input name="date" type="date" required defaultValue={new Date().toISOString().slice(0, 10)} />
+              <input name="date" type="date" required defaultValue={todayIso()} />
             </Field>
             <Field label="Valor (BRL)">
               <NumberInput name="amount" min="0" required autoFocus placeholder="0,00" />

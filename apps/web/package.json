@@ -8,6 +8,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@projeto41/contracts": "*",
+    "@projeto41/finance": "*",
     "@vitejs/plugin-react": "^4.5.2",
     "lucide-react": "^0.515.0",
     "react": "^19.1.0",

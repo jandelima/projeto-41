@@ -51,7 +51,7 @@ export function createPriceService(
 
   async function runCrypto() {
     const symbols = [
-      ...new Set(db.operations.list("crypto").map((operation) => operation.asset))
+      ...new Set(db.operations.list("crypto", { allAccounts: true }).map((operation) => operation.asset))
     ];
     if (symbols.length === 0) {
       return { provider: "crypto", updated: 0, errors: [] as string[] };
@@ -98,7 +98,7 @@ export function createPriceService(
   }
 
   async function runB3() {
-    const symbols = [...new Set(db.operations.list("b3").map((operation) => operation.asset))];
+    const symbols = [...new Set(db.operations.list("b3", { allAccounts: true }).map((operation) => operation.asset))];
     const errors: string[] = [];
     let updated = 0;
     for (const symbol of symbols) {

@@ -2,9 +2,9 @@ import { Search, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { KeyboardEvent } from "react";
 import { api } from "../lib/api.js";
-import { money } from "../lib/format.js";
+import { currencyRaw } from "../lib/format.js";
 import { b3IconUrl } from "../lib/icons.js";
-import type { B3SearchResult } from "../lib/types.js";
+import type { B3SearchResult } from "@projeto41/contracts";
 import { AssetIcon, IconButton } from "./ui.js";
 
 export function B3AssetSearch({
@@ -133,7 +133,7 @@ export function B3AssetSearch({
                 <AssetIcon src={b3IconUrl(result.symbol)} label={result.symbol} />
                 <span className="crypto-sym">{result.symbol}</span>
                 <span className="crypto-name">{result.name}</span>
-                {result.price > 0 && <span className="crypto-rank">{money(result.price)}</span>}
+                {result.price > 0 && <span className="crypto-rank">{currencyRaw(result.price, "BRL")}</span>}
               </button>
             </li>
           ))}

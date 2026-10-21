@@ -13,7 +13,9 @@
     "paths": {
       "@projeto41/contracts": ["packages/contracts/src/index.ts"],
       "@projeto41/finance": ["packages/finance/src/index.ts"],
-      "@projeto41/db": ["packages/db/src/index.ts"]
+      "@projeto41/db": ["packages/db/src/index.ts"],
+      "@projeto41/pdf-statements": ["packages/pdf-statements/src/index.ts"],
+      "@projeto41/pdf-statements/testing": ["packages/pdf-statements/src/testing/index.ts"]
     }
   }
 }

@@ -1,0 +1,262 @@
+{
+  "rowCount": 11,
+  "sumCents": 160224,
+  "statement": {
+    "adapterId": "btg-extrato",
+    "layoutVersion": "2026-10",
+    "reference": {
+      "year": 2026,
+      "month": 10
+    },
+    "periodStart": "2026-09-18",
+    "periodEnd": "2026-10-18",
+    "closingBalanceCents": 160224,
+    "declaredTotals": [
+      {
+        "key": "saldo-2026-09-29",
+        "label": "Saldo diário 29/09",
+        "declaredCents": -6600,
+        "dateFrom": "2026-09-29",
+        "dateTo": "2026-09-29"
+      },
+      {
+        "key": "saldo-2026-09-30",
+        "label": "Saldo diário 30/09",
+        "declaredCents": 57000,
+        "dateFrom": "2026-09-30",
+        "dateTo": "2026-09-30"
+      },
+      {
+        "key": "saldo-2026-10-01",
+        "label": "Saldo diário 01/10",
+        "declaredCents": -119456,
+        "dateFrom": "2026-10-01",
+        "dateTo": "2026-10-01"
+      },
+      {
+        "key": "saldo-atual",
+        "label": "Saldo atual do extrato",
+        "declaredCents": -69056,
+        "dateFrom": "2026-09-29",
+        "dateTo": "2026-10-18"
+      }
+    ],
+    "rows": [
+      {
+        "date": "2026-09-28",
+        "time": "11:27",
+        "rawDescription": "Fulana de Tal",
+        "amountCents": 16000,
+        "signKnown": true,
+        "installment": null,
+        "confidence": 0.9,
+        "sourcePage": 1,
+        "sourceLine": 1,
+        "cells": {
+          "Data e hora": "28/09/2026 11h27",
+          "Categoria": "Transferência",
+          "Transação": "Pix recebido",
+          "Descrição": "Fulana de Tal",
+          "Valor": "R$ 160,00"
+        },
+        "trnType": "Pix recebido"
+      },
+      {
+        "date": "2026-09-28",
+        "time": "11:34",
+        "rawDescription": "Academia Exemplo",
+        "amountCents": -8000,
+        "signKnown": true,
+        "installment": null,
+        "confidence": 0.85,
+        "sourcePage": 1,
+        "sourceLine": 2,
+        "cells": {
+          "Data e hora": "28/09/2026 11h34",
+          "Categoria": "Cuidados Pessoais",
+          "Transação": "Pix enviado",
+          "Descrição": "Academia Exemplo",
+          "Valor": "-R$ 80,00"
+        },
+        "trnType": "Pix enviado"
+      },
+      {
+        "date": "2026-09-28",
+        "time": "12:15",
+        "rawDescription": "Corretora Ficticia Ltda",
+        "amountCents": 221280,
+        "signKnown": true,
+        "installment": null,
+        "confidence": 0.9,
+        "sourcePage": 1,
+        "sourceLine": 3,
+        "cells": {
+          "Data e hora": "28/09/2026 12h15",
+          "Categoria": "Transferência",
+          "Transação": "Pix recebido",
+          "Descrição": "Corretora Ficticia Ltda",
+          "Valor": "R$ 2.212,80"
+        },
+        "trnType": "Pix recebido"
+      },
+      {
+        "date": "2026-09-29",
+        "time": "11:05",
+        "rawDescription": "Uber",
+        "amountCents": -713,
+        "signKnown": true,
+        "installment": null,
+        "confidence": 0.9,
+        "sourcePage": 1,
+        "sourceLine": 5,
+        "cells": {
+          "Data e hora": "29/09/2026 11h05",
+          "Categoria": "Transporte",
+          "Transação": "Pix enviado",
+          "Descrição": "Uber",
+          "Valor": "-R$ 7,13"
+        },
+        "trnType": "Pix enviado"
+      },
+      {
+        "date": "2026-09-29",
+        "time": "17:41",
+        "rawDescription": "Padaria Do Exemplo",
+        "amountCents": -2243,
+        "signKnown": true,
+        "installment": null,
+        "confidence": 0.85,
+        "sourcePage": 1,
+        "sourceLine": 6,
+        "cells": {
+          "Data e hora": "29/09/2026 17h41",
+          "Categoria": "Viagem",
+          "Transação": "Pix enviado por Fulana de Tal",
+          "Descrição": "Padaria Do Exemplo",
+          "Valor": "-R$ 22,43"
+        },
+        "trnType": "Pix enviado por Fulana de Tal"
+      },
+      {
+        "date": "2026-09-29",
+        "time": "22:34",
+        "rawDescription": "Instituicao De Pagamento Teste",
+        "amountCents": -3644,
+        "signKnown": true,
+        "installment": null,
+        "confidence": 0.9,
+        "sourcePage": 1,
+        "sourceLine": 7,
+        "cells": {
+          "Data e hora": "29/09/2026 22h34",
+          "Categoria": "Outra Categoria",
+          "Transação": "Pix enviado",
+          "Descrição": "Instituicao De Pagamento Teste",
+          "Valor": "-R$ 36,44"
+        },
+        "trnType": "Pix enviado"
+      },
+      {
+        "date": "2026-09-30",
+        "time": "08:13",
+        "rawDescription": "Farmácia Modelo",
+        "amountCents": -13000,
+        "signKnown": true,
+        "installment": null,
+        "confidence": 0.9,
+        "sourcePage": 2,
+        "sourceLine": 1,
+        "cells": {
+          "Data e hora": "30/09/2026 08h13",
+          "Categoria": "Saúde",
+          "Transação": "Pix enviado",
+          "Descrição": "Farmácia Modelo",
+          "Valor": "-R$ 130,00"
+        },
+        "trnType": "Pix enviado"
+      },
+      {
+        "date": "2026-09-30",
+        "time": "11:34",
+        "rawDescription": "Beltrano Da Silva",
+        "amountCents": 80000,
+        "signKnown": true,
+        "installment": null,
+        "confidence": 0.9,
+        "sourcePage": 2,
+        "sourceLine": 2,
+        "cells": {
+          "Data e hora": "30/09/2026 11h34",
+          "Categoria": "Investimentos",
+          "Transação": "Transferência recebida",
+          "Descrição": "Beltrano Da Silva",
+          "Valor": "R$ 800,00"
+        },
+        "trnType": "Transferência recebida"
+      },
+      {
+        "date": "2026-09-30",
+        "time": "15:21",
+        "rawDescription": "Posto Exemplo",
+        "amountCents": -10000,
+        "signKnown": true,
+        "installment": null,
+        "confidence": 0.85,
+        "sourcePage": 2,
+        "sourceLine": 3,
+        "cells": {
+          "Data e hora": "30/09/2026 15h21",
+          "Categoria": "Lazer e Entretenimento",
+          "Transação": "Pix enviado",
+          "Descrição": "Posto Exemplo",
+          "Valor": "-R$ 100,00"
+        },
+        "trnType": "Pix enviado"
+      },
+      {
+        "date": "2026-10-01",
+        "time": "09:00",
+        "rawDescription": "Mercadinho Teste",
+        "amountCents": -123456,
+        "signKnown": true,
+        "installment": null,
+        "confidence": 0.9,
+        "sourcePage": 2,
+        "sourceLine": 5,
+        "cells": {
+          "Data e hora": "01/10/2026 09h00",
+          "Categoria": "Alimentação",
+          "Transação": "Pix enviado",
+          "Descrição": "Mercadinho Teste",
+          "Valor": "-R$ 1.234,56"
+        },
+        "trnType": "Pix enviado"
+      },
+      {
+        "date": "2026-10-01",
+        "time": "10:38",
+        "rawDescription": "Beltrano Da Silva",
+        "amountCents": 4000,
+        "signKnown": true,
+        "installment": null,
+        "confidence": 0.9,
+        "sourcePage": 2,
+        "sourceLine": 6,
+        "cells": {
+          "Data e hora": "01/10/2026 10h38",
+          "Categoria": "Transferência",
+          "Transação": "Pix recebido",
+          "Descrição": "Beltrano Da Silva",
+          "Valor": "R$ 40,00"
+        },
+        "trnType": "Pix recebido"
+      }
+    ],
+    "warnings": [
+      {
+        "code": "first_day_unchecked",
+        "message": "O extrato nao traz saldo anterior a 28/09: os 3 lancamento(s) desse dia nao tem conferencia."
+      }
+    ]
+  }
+}
